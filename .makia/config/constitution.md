@@ -33,8 +33,13 @@ En la raíz del repositorio existe `docs/` como enlace simbólico que apunta a `
 
 El DEPLOY es un Pull Request hacia `main`.
 
-Ese Pull Request debe estar aprobado.
+El Orquestador abre el Pull Request y lo mergea directamente, sin pedir aprobación al USUARIO.
 
 No hay push directo a `main`.
+
+### Integración y conservación de ramas
+
+- Cada rama de spec `makia/<tipo>/<spec-slug>` se integra en `makia/dev/<idea-slug>` por Pull Request (squash) que el Orquestador mergea directamente, sin aprobación del USUARIO.
+- No se eliminan ramas (locales ni remotas) ni worktrees de MakIA tras merge o PR; prevalece sobre los pasos de borrado de `session.md`.
 
 > **Seguridad:** ningún token, credencial o valor sensible se escribe aquí en texto plano — siempre `${NOMBRE_VARIABLE}` resuelto desde el entorno. Este archivo vive en `.makia/config/constitution.md` de cada proyecto, se versiona, y nunca se genera con contenido inventado por MakIA.
