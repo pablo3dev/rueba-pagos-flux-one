@@ -89,7 +89,7 @@
   - **Evidencia:** pruebas de límites de contraseña (12 y 128 aceptan; 11 y 129 rechazan), normalización de email y `decideRotation` con las tres salidas `ROTATE`/`REUSED`/`EXPIRED` (incluido revocado y expirado → `REUSED`).
 
 ### Phase 2: Core Logic & Application Layer
-- [ ] **Task 2.1: Puertos y casos de uso con fakes** `[REQ-1.2, REQ-1.3, REQ-2.1, REQ-2.2, REQ-3.1, REQ-3.2, REQ-3.3, REQ-4.1, REQ-4.2, REQ-5.1, REQ-5.2, REQ-6.1, REQ-6.2, REQ-7.1]` `[DESIGN §4.1]`
+- [x] **Task 2.1: Puertos y casos de uso con fakes** `[REQ-1.2, REQ-1.3, REQ-2.1, REQ-2.2, REQ-3.1, REQ-3.2, REQ-3.3, REQ-4.1, REQ-4.2, REQ-5.1, REQ-5.2, REQ-6.1, REQ-6.2, REQ-7.1]` `[DESIGN §4.1]`
   - **Archivos:**
     - `services/auth/src/application/ports/clock.ts`
     - `services/auth/src/application/ports/password-hasher.ts`
@@ -249,10 +249,10 @@
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
-| **Phase 2: Core Logic & Application** | 3 | 0 | `Pending` |
+| **Phase 2: Core Logic & Application** | 3 | 1 | `In Progress` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **6** | **38%** |
+| **Total Global** | **16** | **7** | **44%** |
 
 ---
 
