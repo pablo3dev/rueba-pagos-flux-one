@@ -151,7 +151,7 @@
     - `[AC-RIE-06]` `RandomOutcomePicker` con `random` inyectado reparte según los pesos y `pickTimeoutProcessed` cambia en el umbral 0.5.
 
 ### Phase 3: Presentation, Endpoints & Integration
-- [ ] **Task 3.1: Configuración** `[REQ-6.1, REQ-6.2, REQ-6.3]` `[DESIGN §4.3]`
+- [x] **Task 3.1: Configuración** `[REQ-6.1, REQ-6.2, REQ-6.3]` `[DESIGN §4.3]`
   - **Archivos:** `services/bank-rail/src/config.ts`, `services/bank-rail/tests/unit/config.test.ts`
   - **Depende de:** 2.2
   - **Alcance:** `loadConfig(env)` con la tabla de variables de `design.md § 4.3` (`PORT`, `RAIL_OUTCOME_WEIGHTS`, `RAIL_TIMEOUT_DELAY_MS`, `RAIL_LEDGER_PATH`, `LOG_LEVEL`), con los defaults indicados y errores que nombran la variable.
@@ -280,9 +280,9 @@
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 4 | 4 | `Done` |
 | **Phase 2: Core Logic & Application** | 2 | 2 | `Done` |
-| **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
+| **Phase 3: Presentation & Endpoints** | 4 | 1 | `In Progress` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **13** | **6** | **46%** |
+| **Total Global** | **13** | **7** | **54%** |
 
 ---
 
