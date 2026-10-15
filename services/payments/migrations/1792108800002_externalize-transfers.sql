@@ -1,0 +1,40 @@
+-- Up Migration
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_type_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_status_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_failure_reason_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_distinct_chk;
+ALTER TABLE payment_schema.transfers ALTER COLUMN to_account_id DROP NOT NULL;
+ALTER TABLE payment_schema.transfers ADD COLUMN to_external_account varchar(34);
+ALTER TABLE payment_schema.transfers ADD COLUMN rail_reference varchar(64) CONSTRAINT transfers_rail_reference_key UNIQUE;
+ALTER TABLE payment_schema.transfers ADD COLUMN rail_attempts integer NOT NULL DEFAULT 0;
+ALTER TABLE payment_schema.transfers ADD COLUMN next_attempt_at timestamptz;
+ALTER TABLE payment_schema.transfers ADD COLUMN lease_until timestamptz;
+ALTER TABLE payment_schema.transfers ADD COLUMN last_rail_outcome varchar(16);
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_type_chk CHECK (type IN ('INTERNAL', 'EXTERNAL'));
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_status_chk CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED', 'UNKNOWN'));
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_failure_reason_chk CHECK (failure_reason IS NULL OR failure_reason IN ('INSUFFICIENT_FUNDS', 'RAIL_REJECTED', 'RAIL_UNAVAILABLE'));
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_external_account_chk CHECK (to_external_account IS NULL OR to_external_account ~ '^[A-Z0-9-]{6,34}$');
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_last_rail_outcome_chk CHECK (last_rail_outcome IS NULL OR last_rail_outcome IN ('ACCEPTED', 'REJECTED', 'UNAVAILABLE', 'TIMEOUT', 'NETWORK_ERROR', 'NOT_FOUND'));
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_shape_chk CHECK ((type = 'INTERNAL' AND to_account_id IS NOT NULL AND to_external_account IS NULL) OR (type = 'EXTERNAL' AND to_account_id IS NULL AND to_external_account IS NOT NULL));
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_distinct_chk CHECK (to_account_id IS NULL OR from_account_id <> to_account_id);
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_internal_status_chk CHECK (type = 'EXTERNAL' OR status IN ('COMPLETED', 'FAILED'));
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_rail_ref_chk CHECK ((type = 'EXTERNAL') = (rail_reference IS NOT NULL));
+CREATE INDEX transfers_rail_work_idx ON payment_schema.transfers (next_attempt_at) WHERE type = 'EXTERNAL' AND status IN ('PENDING', 'UNKNOWN');
+
+-- Down Migration
+DROP INDEX payment_schema.transfers_rail_work_idx;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_rail_ref_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_internal_status_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_distinct_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_shape_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_last_rail_outcome_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_external_account_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_failure_reason_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_status_chk;
+ALTER TABLE payment_schema.transfers DROP CONSTRAINT transfers_type_chk;
+ALTER TABLE payment_schema.transfers DROP COLUMN last_rail_outcome, DROP COLUMN lease_until, DROP COLUMN next_attempt_at, DROP COLUMN rail_attempts, DROP COLUMN rail_reference, DROP COLUMN to_external_account;
+ALTER TABLE payment_schema.transfers ALTER COLUMN to_account_id SET NOT NULL;
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_type_chk CHECK (type = 'INTERNAL');
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_status_chk CHECK (status IN ('COMPLETED', 'FAILED'));
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_failure_reason_chk CHECK (failure_reason IS NULL OR failure_reason = 'INSUFFICIENT_FUNDS');
+ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_distinct_chk CHECK (from_account_id <> to_account_id);

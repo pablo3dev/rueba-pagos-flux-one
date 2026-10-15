@@ -1,0 +1,417 @@
+openapi: 3.1.0
+info:
+  title: FluxOne Payments API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3002
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: '^[\x21-\x7E]{1,255}$'
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    AccountView:
+      type: object
+      additionalProperties: false
+      required: [id, currency, balance]
+      properties:
+        id:
+          type: string
+        currency:
+          type: string
+          const: COP
+        balance:
+          type: string
+    BalanceView:
+      type: object
+      additionalProperties: false
+      required: [accountId, currency, balance]
+      properties:
+        accountId:
+          type: string
+        currency:
+          type: string
+          const: COP
+        balance:
+          type: string
+    InternalTransferRequest:
+      type: object
+      additionalProperties: false
+      required: [type, fromAccountId, toAccountId, amount]
+      properties:
+        type:
+          const: INTERNAL
+        fromAccountId:
+          type: string
+        toAccountId:
+          type: string
+        amount:
+          type: string
+    ExternalTransferRequest:
+      type: object
+      additionalProperties: false
+      required: [type, fromAccountId, toExternalAccount, amount]
+      properties:
+        type:
+          const: EXTERNAL
+        fromAccountId:
+          type: string
+        toExternalAccount:
+          type: string
+          pattern: '^[A-Z0-9-]{6,34}$'
+        amount:
+          type: string
+    TransferView:
+      type: object
+      additionalProperties: false
+      required: [id, type, fromAccountId, toAccountId, amount, currency, status, createdAt, completedAt]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [INTERNAL, EXTERNAL]
+        fromAccountId:
+          type: string
+        toAccountId:
+          type: [string, 'null']
+        toExternalAccount:
+          type: string
+        amount:
+          type: string
+        currency:
+          const: COP
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED, UNKNOWN, REVERSED]
+        failureReason:
+          type: string
+          enum: [INSUFFICIENT_FUNDS, RAIL_REJECTED, RAIL_UNAVAILABLE]
+        createdAt:
+          type: string
+        completedAt:
+          type: [string, 'null']
+    ReversalView:
+      type: object
+      additionalProperties: false
+      required: [id, transferId, amount, status, createdAt, completedAt]
+      properties:
+        id:
+          type: string
+        transferId:
+          type: string
+        amount:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, REJECTED, UNKNOWN]
+        rejectionReason:
+          type: string
+          enum: [RAIL_REJECTED, RAIL_UNAVAILABLE]
+        createdAt:
+          type: string
+        completedAt:
+          type: [string, 'null']
+    TransferDetail:
+      allOf:
+        - $ref: '#/components/schemas/TransferView'
+        - type: object
+          required: [reversal]
+          properties:
+            reversal:
+              oneOf:
+                - $ref: '#/components/schemas/ReversalView'
+                - type: 'null'
+    TransferPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferView'
+        nextCursor:
+          type: [string, 'null']
+paths:
+  /health/live:
+    get:
+      responses:
+        '200':
+          description: Proceso vivo
+  /health/ready:
+    get:
+      responses:
+        '200':
+          description: Base de datos alcanzable
+        '503':
+          description: Base de datos no alcanzable
+  /accounts:
+    get:
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cuentas del usuario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountView'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /accounts/{id}/balance:
+    get:
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Saldo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceView'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Cuenta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transfers:
+    get:
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Historial
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferPage'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/InternalTransferRequest'
+                - $ref: '#/components/schemas/ExternalTransferRequest'
+              discriminator:
+                propertyName: type
+      responses:
+        '201':
+          description: Transferencia interna o externa sin fondos
+          headers:
+            Idempotent-Replayed:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferView'
+        '202':
+          description: Transferencia externa pendiente
+          headers:
+            Idempotent-Replayed:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferView'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Cuenta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Clave de idempotencia en curso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Conflicto de negocio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transfers/{id}:
+    get:
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle con reverso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferDetail'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Transferencia no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transfers/{id}/reversals:
+    post:
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '201':
+          description: Reverso interno completado
+          headers:
+            Idempotent-Replayed:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReversalView'
+        '202':
+          description: Reverso externo pendiente
+          headers:
+            Idempotent-Replayed:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReversalView'
+        '400':
+          description: Solicitud inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Transferencia no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: No reversible o ya reversada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Destino sin saldo o conflicto de idempotencia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

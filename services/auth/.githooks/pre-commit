@@ -1,0 +1,9 @@
+#!/bin/sh
+# Hook de git del host. Git lo ejecuta con el directorio de trabajo en la raíz del repositorio.
+# lefthook corre dentro del contenedor Node (el host solo tiene Git y Docker).
+if [ ! -d .git ]; then
+  echo 'pre-commit: .git no es un directorio (git worktree); verificación omitida' >&2
+  exit 0
+fi
+cd services/auth || exit 1
+exec docker compose -f compose.dev.yaml run --rm -T --no-deps -w /repo dev npx lefthook run pre-commit --config services/auth/lefthook.yml --no-auto-install

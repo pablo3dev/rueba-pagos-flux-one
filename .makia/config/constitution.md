@@ -1,4 +1,4 @@
-# Constitución — [nombre del proyecto]
+# Constitución — FluxOne-Payment
 
 Directrices de alto nivel del proyecto, escritas para el LLM de un agente: el "qué y por qué" (principios y decisiones) que guía todo el flujo IDEA → DEPLOY. No reemplaza `deploy.md`, `git.md` ni `test.md` (el "cómo" técnico): en su ámbito técnico estricto gana el `config/*.md` correspondiente; en negocio, arquitectura, UX, seguridad y estrategia gana este documento. Una contradicción real entre ambos se reporta al USUARIO, no se resuelve por inferencia.
 
@@ -17,32 +17,91 @@ Rellena SOLO lo que aplica y BORRA el resto. Nada se inventa para completar una 
 
 Ámbito: todo el proyecto o más de una unidad.
 
-### Ejemplo de título: Principios fundamentales
+### Configuración host
 
-<!-- Decisiones técnicas guiadas por negocio, mercado, UX, datos y arquitectura. -->
+El ambiente del proyecto debe ser **100 % Docker** para que sea portable.
 
-### Ejemplo de título: Configuración host
+- Todo se compila dentro de contenedores.
+- Todo se ejecuta dentro de contenedores.
+- No se instala nada en el dispositivo host.
 
-<!-- Qué necesita la máquina host para ejecutar el proyecto. -->
+### Documentación
 
-### Ejemplo de título: Configuración de plataforma destino
+En la raíz del repositorio existe `docs/` como enlace simbólico que apunta a `.makia/docs/`.
 
-<!-- Qué tener o hacer para compilar a la plataforma destino. -->
+### Promoción a main
 
-### Ejemplo de título: Principios de seguridad
+El DEPLOY es un Pull Request hacia `main`.
 
-<!-- Reglas de seguridad del proyecto que todo cambio debe cumplir. -->
+El Orquestador abre el Pull Request y lo mergea (`gh`) únicamente tras el aprobado explícito del USUARIO al DEPLOY. Con ese aprobado, ejecuta todo el resto (PR, merge con squash, tag/deploy según deploy.md) sin pedir más confirmaciones.
 
-### Ejemplo de título: Estrategias de implementación
+No hay push directo a `main`.
 
-<!-- Cómo se prefiere implementar: patrones, orden, límites. -->
+### Integración y conservación de ramas
 
-## Unidad: <ruta de la unidad, p. ej. apps/cli>
+- Cada rama de spec `makia/<tipo>/<spec-slug>` se integra en `makia/dev/<idea-slug>` por Pull Request (squash) que el Orquestador mergea directamente, sin aprobación del USUARIO. Esta excepción aplica solo a los PR de spec hacia la rama de idea; la promoción a `main` requiere el aprobado explícito del USUARIO al DEPLOY.
+- No se eliminan ramas (locales ni remotas) ni worktrees de MakIA tras merge o PR; prevalece sobre los pasos de borrado de `session.md`.
 
-Ámbito: solo esta unidad. Duplica y renombra este bloque por cada unidad con directrices propias; bórralo si ninguna las tiene.
+### Arquitectura
 
-### Ejemplo de título: Estrategias de implementación
+- Arquitectura hexagonal en todo servicio.
+- El dominio no depende de framework, DB, broker ni HTTP.
 
-<!-- Directrices que aplican solo a esta unidad. Sus títulos `###` son adaptables, con las mismas reglas que en Global. -->
+### Stack y versiones
+
+- Node 24.22.0 + TypeScript 6.0.3, ESM, con npm workspaces.
+- Versiones exactas (sin `^` ni `~`), fijadas en la sección de stack de cada `design.md` y en las matrices de cada spec.
+- `.npmrc` raíz con `ignore-scripts=true`: las instalaciones npm no ejecutan scripts de ciclo de vida.
+
+### Dinero
+
+- Moneda: COP.
+- DB: `numeric(18,2)`. Dominio: `bigint` de centavos. JSON: `string`. Nunca `float`.
+
+### Idempotencia
+
+- Toda operación monetaria con efecto exige `Idempotency-Key`, con ámbito (usuario, operación), evaluada en la misma transacción.
+
+### Datos y eventos
+
+- Cada servicio usa solo su propio esquema y su propio rol de DB; sin FK entre esquemas.
+- Cada cambio de estado publica un evento vía Transactional Outbox.
+- Los consumidores son idempotentes por `eventId`.
+
+### Logs
+
+- Logs en JSON con `correlationId`.
+- Nunca se registran secretos, tokens ni contraseñas.
+
+### Exclusiones y formato de archivos
+
+- `.makia/`, `.claude/`, `.cursor/` y `.agents/` quedan fuera de ESLint, Prettier y Docker.
+- Saltos de línea LF en todo el repositorio.
+
+### Límite de la unidad
+
+Cada unidad de código guarda todos sus archivos dentro de su carpeta. El comando de Docker que levanta la unidad, y los archivos de ese comando, también están dentro de la unidad.
+
+Nada de la unidad se crea fuera de su carpeta.
+
+## Unidad: services/auth
+
+Ámbito: solo `services/auth`.
+
+### Ejecución en contenedores
+
+- Todo comando de compilación, prueba y ejecución de esta unidad se ejecuta con el directorio de trabajo en `services/auth/`, mediante `docker compose -f compose.dev.yaml` (servicio `dev`).
+- El contexto de build de ese Compose es el directorio `services/auth/`.
+- La DB de pruebas es el servicio `postgres` de ese Compose.
+
+### Archivos de la unidad
+
+- Viven en `services/auth/`: `package.json`, `package-lock.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc`, `.gitattributes`, `.dockerignore`, `lefthook.yml` y `.githooks/`.
+- El `.npmrc` de esta unidad es `services/auth/.npmrc` y contiene `ignore-scripts=true`.
+- Permanecen en la raíz del repositorio, fuera de la unidad: `.makia/`, `AGENTS.md`, `CLAUDE.md`, `README.md` y el enlace `docs/`.
+
+### Modelo de dominio
+
+- El modelo de dominio de esta unidad vive en `.makia/docs/specs/services/auth/domain-model.md` (Contexto Delimitado de Identidad).
 
 > **Seguridad:** ningún token, credencial o valor sensible se escribe aquí en texto plano — siempre `${NOMBRE_VARIABLE}` resuelto desde el entorno. Este archivo vive en `.makia/config/constitution.md` de cada proyecto, se versiona, y nunca se genera con contenido inventado por MakIA.
