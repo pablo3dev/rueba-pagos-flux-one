@@ -23,7 +23,7 @@ El servicio se compila, prueba y ejecuta solo con Docker, sin instalar nada en e
 | Phase 3: Presentation, Endpoints & Integration | `Pendiente` |
 | Phase 4: Verification, Testing & Polish | `Pendiente` |
 
-**Progreso global:** `19%` (3 de 16 tareas completadas)
+**Progreso global:** `25%` (4 de 16 tareas completadas)
 
 ## Qué puede hacer ya el usuario / Qué falta
 

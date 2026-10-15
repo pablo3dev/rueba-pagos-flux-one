@@ -59,7 +59,7 @@
     - `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "if(!require('node:fs').readFileSync('.npmrc','utf8').includes('ignore-scripts=true'))process.exit(1)"`
   - **Evidencia:** salida de ambos comandos.
 
-- [ ] **Task 1.4: Workspace `services/auth` e instalación reproducible** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-11.1]` `[DESIGN §1, §5]`
+- [x] **Task 1.4: Workspace `services/auth` e instalación reproducible** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-11.1]` `[DESIGN §1, §5]`
   - **Archivos:** `services/auth/package.json`, `services/auth/tsconfig.json`, `services/auth/tsconfig.build.json`, `services/auth/vitest.config.ts`, `package-lock.json` (generado con `npm install`)
   - **Depende de:** 1.3
   - **Alcance:** crear el workspace `services/auth` con las versiones exactas de `design.md § 1` y generar `package-lock.json` con `npm install` dentro del contenedor `dev`. Las devDependencies de pruebas del workspace son `vitest`, `tsx` y `@types/pg`. `vitest.config.ts` define los proyectos `unit` y `db`; el proyecto `db` usa la PostgreSQL 18.6 del servicio `postgres` de Compose y `fileParallelism: false`. Es la verificación de versiones: instalación reproducible y chequeos base antes de escribir código de producto.
@@ -248,11 +248,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 6 | 3 | `In Progress` |
+| **Phase 1: Foundation & Domain** | 6 | 4 | `In Progress` |
 | **Phase 2: Core Logic & Application** | 3 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **3** | **19%** |
+| **Total Global** | **16** | **4** | **25%** |
 
 ---
 
