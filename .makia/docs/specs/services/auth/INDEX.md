@@ -15,7 +15,7 @@ graph LR
 
 | Spec | Estado | Creación | Paralelizable con | Ruta | Depende de |
 |---|:---:|:---:|:---:|---|---|
-| autenticacion-usuarios-auth | `Pendiente` | `Aprobado` | `—` | `autenticacion-usuarios-auth/summary.md` | — |
+| autenticacion-usuarios-auth | `En progreso` | `Aprobado` | `—` | `autenticacion-usuarios-auth/summary.md` | — |
 
 > `domain-model.md` de este árbol ([domain-model.md](domain-model.md)) es el modelo del Contexto Delimitado de Identidad.
 > El spec de la capacidad multi-unidad pertenece a la feature `autenticacion-usuarios` (unidad `services/auth`); los demás specs de la capacidad viven en los `INDEX.md` de sus propias unidades.
