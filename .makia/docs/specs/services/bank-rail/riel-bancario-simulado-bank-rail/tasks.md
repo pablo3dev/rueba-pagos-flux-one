@@ -148,11 +148,11 @@
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run typecheck -w services/bank-rail`
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance tests/acceptance/operability.test.ts -t "AC-RIE-34"`
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance tests/acceptance/operability.test.ts -t "AC-RIE-36"`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps -w /app/services/bank-rail -e RAIL_OUTCOME_WEIGHTS=0,0,0,0 dev sh -c "npx tsx src/main.ts 2>&1 | grep -q RAIL_OUTCOME_WEIGHTS"`
+    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps -w /app/services/bank-rail -e RAIL_OUTCOME_WEIGHTS=0,0,0,0 dev sh -c 'out=$(npx tsx src/main.ts 2>&1); rc=$?; printf "%s\n" "$out" | grep -q RAIL_OUTCOME_WEIGHTS && [ "$rc" -ne 0 ]'`
   - **Evidencia:**
     - `[AC-RIE-34]` `GET /health` responde 200 `{status:"ok"}`.
     - `[AC-RIE-36]` `GET /health` con cabecera `Authorization` responde igual que sin ella.
-    - `[AC-RIE-31]` `npx tsx src/main.ts` con `RAIL_OUTCOME_WEIGHTS=0,0,0,0` termina con código distinto de 0 y un mensaje que contiene `RAIL_OUTCOME_WEIGHTS` (verificación por comando de `requirements.md`).
+    - `[AC-RIE-31]` `npx tsx src/main.ts` con `RAIL_OUTCOME_WEIGHTS=0,0,0,0` termina con código distinto de 0 (`rc` capturado de `tsx` antes del pipe) y un mensaje que contiene `RAIL_OUTCOME_WEIGHTS` (el comando de aceptación exige ambas condiciones a la vez; verificación por comando de `requirements.md`).
 
 - [ ] **Task 3.3: Transferencias y consulta: rutas, idempotencia y persistencia de extremo a extremo** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-1.6, REQ-1.7, REQ-2.1, REQ-2.2, REQ-2.3, REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-3.5, REQ-5.1, REQ-5.2, REQ-5.4, REQ-5.5, REQ-5.6, REQ-6.4, REQ-7.4]` `[DESIGN §4.1, §4.2, §8.3]`
   - **Archivos:**
@@ -228,7 +228,7 @@
   - **Evidencia (comportamiento crítico: persistencia en el contenedor):** `[AC-RIE-38]` salida de cada comando: el `POST` responde 200 con los pesos `100,0,0,0` y, tras recrear el contenedor sin borrar volúmenes, el `GET` de `PERSIST-1` responde 200.
 
 - [ ] **Task 4.3: Verificación global del spec** `[REQ-9.1]` `[DESIGN §5, §8.3]`
-  - **Archivos:** ninguno nuevo.
+  - **Archivos:** ninguno (solo verificación).
   - **Depende de:** 4.1, 4.2
   - **Alcance:** ejecutar la verificación completa del monorepo dentro del contenedor `dev` y confirmar la cobertura de los criterios de aceptación AC-RIE-01..40.
   - **Criterio de aceptación:** todos con código de salida 0:
