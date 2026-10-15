@@ -29,4 +29,12 @@ El ambiente del proyecto debe ser **100 % Docker** para que sea portable.
 
 En la raíz del repositorio existe `docs/` como enlace simbólico que apunta a `.makia/docs/`.
 
+### Promoción a main
+
+El DEPLOY es un Pull Request hacia `main`.
+
+Ese Pull Request debe estar aprobado.
+
+No hay push directo a `main`.
+
 > **Seguridad:** ningún token, credencial o valor sensible se escribe aquí en texto plano — siempre `${NOMBRE_VARIABLE}` resuelto desde el entorno. Este archivo vive en `.makia/config/constitution.md` de cada proyecto, se versiona, y nunca se genera con contenido inventado por MakIA.
