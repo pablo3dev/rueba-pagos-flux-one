@@ -199,7 +199,7 @@
     - `[AC-AUT-18]` token expirado, firma inválida, `iss` y `aud` incorrectos → 401 `UNAUTHORIZED`.
     - Evidencia observada (2026-10-15): `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db --reporter=verbose tests/acceptance/refresh.test.ts tests/acceptance/logout.test.ts tests/acceptance/profile.test.ts` → 3 archivos y 18 pruebas pasan contra PostgreSQL 18.6 de Compose, entre ellas: `✓ [AC-AUT-11] dos renovaciones simultáneas con el mismo token: una 200 y otra 401 REFRESH_TOKEN_REUSED`; `✓ [AC-AUT-12] la reutilización revoca toda la familia: el token sucesor deja de servir y responde 401 REFRESH_TOKEN_REUSED`; `✓ [AC-AUT-13] cookie ausente, alterada, desconocida y expirada responden 401 REFRESH_TOKEN_INVALID y limpian la cookie`; `✓ [AC-AUT-14] la base solo guarda el SHA-256 del token y expires_at = emisión + 7 días`; `✓ [AC-AUT-18] token expirado, firma inválida, iss y aud incorrectos responden 401 UNAUTHORIZED`.
 
-- [ ] **Task 3.4: Operación: health, formato de errores y logs sin secretos** `[REQ-8.1, REQ-8.2, REQ-8.3]` `[DESIGN §4.2, §7.1]`
+- [x] **Task 3.4: Operación: health, formato de errores y logs sin secretos** `[REQ-8.1, REQ-8.2, REQ-8.3]` `[DESIGN §4.2, §7.1]`
   - **Archivos:** `services/auth/tests/acceptance/operability.test.ts`; ajustes a los archivos de producción de 3.1–3.3 que la prueba requiera para pasar.
   - **Depende de:** 3.3
   - **Alcance:** verificar de extremo a extremo health, formato uniforme de errores y contenido de los logs.
@@ -208,6 +208,7 @@
     - `[AC-AUT-22]` `/health/ready` devuelve 503 con el pool cerrado y `/health/live` 200.
     - `[AC-AUT-23]` ruta inexistente 404 `NOT_FOUND` y error inesperado 500 `INTERNAL_ERROR` con cuerpo genérico.
     - `[AC-AUT-24]` los logs capturados contienen `auth.login_succeeded`, `auth.login_failed` (con hash SHA-256 del email) y `auth.refresh_reuse_detected`, y NO contienen la contraseña, el token de acceso, el valor de la cookie ni el email en el evento de login fallido.
+    - Evidencia observada (2026-10-15): `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db --reporter=verbose tests/acceptance/operability.test.ts` → 1 archivo y 4 pruebas pasan contra PostgreSQL 18.6 de Compose: `✓ [AC-AUT-22] /health/ready devuelve 503 con el pool cerrado y /health/live sigue en 200`; `✓ [AC-AUT-23] una ruta inexistente responde 404 NOT_FOUND con el formato uniforme`; `✓ [AC-AUT-23] un error inesperado responde 500 INTERNAL_ERROR con cuerpo genérico y queda en el log`; `✓ [AC-AUT-24] los logs registran los eventos de auth sin contraseña, token, cookie ni email en el login fallido`.
 
 ### Phase 4: Verification, Testing & Polish
 - [ ] **Task 4.1: [P] Contrato OpenAPI 3.1** `[REQ-9.1]` `[DESIGN §4.2, §8.3]`
@@ -253,9 +254,9 @@
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
-| **Phase 3: Presentation & Endpoints** | 4 | 3 | `In Progress` |
+| **Phase 3: Presentation & Endpoints** | 4 | 4 | `Done` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **12** | **75%** |
+| **Total Global** | **16** | **13** | **81%** |
 
 ---
 
