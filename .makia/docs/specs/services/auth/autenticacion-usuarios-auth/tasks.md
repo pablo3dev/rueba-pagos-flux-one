@@ -44,7 +44,7 @@
     - limpieza: `docker compose -f services/auth/compose.dev.yaml down -v`
   - **Evidencia:** salida de cada comando.
 
-- [ ] **Task 1.2: Hook de pre-commit: `lefthook.yml` y `.githooks/pre-commit`** `[REQ-10.3]` `[DESIGN §5]`
+- [x] **Task 1.2: Hook de pre-commit: `lefthook.yml` y `.githooks/pre-commit`** `[REQ-10.3]` `[DESIGN §5]`
   - **Archivos:** `lefthook.yml`, `.githooks/pre-commit`
   - **Depende de:** 1.1
   - **Alcance:** crear `lefthook.yml` en la raíz con el contenido exacto de `design.md § 5` (YAML con comillas simples, por `singleQuote` de `.prettierrc`) y el script versionado `.githooks/pre-commit`, que ejecuta `docker compose -f services/auth/compose.dev.yaml run --rm -T --no-deps dev npx lefthook run pre-commit --no-auto-install` y se omite con aviso si `.git` no es un directorio (worktree). El archivo se marca ejecutable en el índice con `git update-index --add --chmod=+x .githooks/pre-commit` al preparar el commit de la tarea. El desarrollador activa el hook con `git config core.hooksPath .githooks` (paso manual, fuera de los criterios).
@@ -248,11 +248,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 6 | 1 | `In Progress` |
+| **Phase 1: Foundation & Domain** | 6 | 2 | `In Progress` |
 | **Phase 2: Core Logic & Application** | 3 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **1** | **6%** |
+| **Total Global** | **16** | **2** | **12%** |
 
 ---
 
