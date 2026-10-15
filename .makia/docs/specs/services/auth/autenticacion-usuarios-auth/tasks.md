@@ -119,7 +119,7 @@
   - **Criterio de aceptación:** `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run test -w services/auth -- --project unit tests/unit/application`
   - **Evidencia:** login con email inexistente invoca `verify` con `dummyPasswordHash` y lanza `InvalidCredentialsError`; refresh con salida `REUSED` lanza `RefreshTokenReusedError`; logout con token desconocido no falla.
 
-- [ ] **Task 2.2: [P] Adaptadores de salida crypto** `[REQ-1.1, REQ-2.4, REQ-3.4, REQ-5.2, REQ-6.2]` `[DESIGN §4.1]`
+- [x] **Task 2.2: [P] Adaptadores de salida crypto** `[REQ-1.1, REQ-2.4, REQ-3.4, REQ-5.2, REQ-6.2]` `[DESIGN §4.1]`
   - **Archivos:**
     - `services/auth/src/adapters/outbound/crypto/argon2-password-hasher.ts`
     - `services/auth/src/adapters/outbound/crypto/jose-token-issuer.ts`
@@ -249,10 +249,10 @@
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
-| **Phase 2: Core Logic & Application** | 3 | 1 | `In Progress` |
+| **Phase 2: Core Logic & Application** | 3 | 2 | `In Progress` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **7** | **44%** |
+| **Total Global** | **16** | **8** | **50%** |
 
 ---
 
