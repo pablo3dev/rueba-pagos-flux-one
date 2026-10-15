@@ -135,7 +135,7 @@
   - **Criterio de aceptación:** `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run test -w services/auth -- --project unit tests/unit/adapters`
   - **Evidencia:** el hash comienza con `$argon2id$v=19$m=19456,t=2,p=1$`; el JWT tiene header `alg EdDSA` y `kid`, claims `iss`, `aud`, `sub`, `email`, `exp - iat = 900`; se rechazan token expirado, `iss`/`aud` incorrectos y `alg` distinto; el token opaco decodifica a 32 bytes y su hash es SHA-256 hex de 64 caracteres.
 
-- [ ] **Task 2.3: [P] Adaptadores de salida Postgres** `[REQ-1.1, REQ-1.3, REQ-3.1, REQ-3.2, REQ-4.1, REQ-6.2, REQ-7.1]` `[DESIGN §3.2, §4.1]`
+- [x] **Task 2.3: [P] Adaptadores de salida Postgres** `[REQ-1.1, REQ-1.3, REQ-3.1, REQ-3.2, REQ-4.1, REQ-6.2, REQ-7.1]` `[DESIGN §3.2, §4.1]`
   - **Archivos:**
     - `services/auth/src/adapters/outbound/postgres/pool.ts`
     - `services/auth/src/adapters/outbound/postgres/migrate.ts`
@@ -249,10 +249,10 @@
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
-| **Phase 2: Core Logic & Application** | 3 | 2 | `In Progress` |
+| **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **8** | **50%** |
+| **Total Global** | **16** | **9** | **56%** |
 
 ---
 
