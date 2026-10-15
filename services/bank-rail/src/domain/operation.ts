@@ -25,8 +25,7 @@ export interface BankOperation {
 }
 
 export type RecordedResult =
-  | { status: 'ACCEPTED' }
-  | { status: 'REJECTED'; reason: RejectionReason };
+  { status: 'ACCEPTED' } | { status: 'REJECTED'; reason: RejectionReason };
 
 const REJECTION_REASONS: readonly RejectionReason[] = [
   'REJECTED_BY_BANK',

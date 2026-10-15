@@ -97,9 +97,9 @@ describe('decideReversalRejection', () => {
         acceptedReversal(),
       ),
     ).toBe('ORIGINAL_NOT_ACCEPTED');
-    expect(
-      decideReversalRejection(request('99.00'), acceptedReversal(), acceptedReversal()),
-    ).toBe('ORIGINAL_NOT_ACCEPTED');
+    expect(decideReversalRejection(request('99.00'), acceptedReversal(), acceptedReversal())).toBe(
+      'ORIGINAL_NOT_ACCEPTED',
+    );
     expect(decideReversalRejection(request('99.00'), transfer(), acceptedReversal())).toBe(
       'AMOUNT_MISMATCH',
     );

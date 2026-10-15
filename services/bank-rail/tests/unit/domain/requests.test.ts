@@ -99,10 +99,7 @@ describe('parseReversalRequest', () => {
   });
 
   it('[AC-RIE-07] rechaza un reverso con un campo de tipo incorrecto', () => {
-    expectValidation(
-      () => parseReversalRequest({ ...reversal, originalReference: 99 }),
-      '99',
-    );
+    expectValidation(() => parseReversalRequest({ ...reversal, originalReference: 99 }), '99');
     expectValidation(() => parseReversalRequest({ ...reversal, amount: 20 }), '20');
   });
 });

@@ -81,7 +81,7 @@
     - `[AC-RIE-06]`/`[AC-RIE-31]` `parseOutcomeWeights` rechaza `1,2,3`, `a,b,c,d`, `-1,2,3,4`, `0,0,0,0` y `25, 25,25,25`, y acepta `100,0,0,0`; `pickByWeights` respeta los límites de cada tramo y nunca devuelve un resultado de peso 0.
     - `[AC-RIE-28]` `parseStoredOperation` rechaza campos faltantes, `reason` en una operación aceptada e incoherencia entre `kind` y sus campos.
 
-- [ ] **Task 1.4: Lockfile y contexto Docker dentro de la unidad** `[REQ-9.1]` `[DESIGN §2.3, §5]`
+- [x] **Task 1.4: Lockfile y contexto Docker dentro de la unidad** `[REQ-9.1]` `[DESIGN §2.3, §5]`
   - **Archivos:**
     - `services/bank-rail/compose.dev.yaml` (modificar al contenido vigente de `design.md § 2.3`: contexto `.`, `dockerfile: Dockerfile`, bind `.:/app`, volúmenes `node_modules_bank_rail` y `npm_cache`; sin `node_modules_root` y sin montar la raíz)
     - `services/bank-rail/package.json` (modificar: devDependencies y scripts `lint`, `format`, `format:check` de `design.md § 5`)
@@ -278,11 +278,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 4 | 3 | `In Progress` |
+| **Phase 1: Foundation & Domain** | 4 | 4 | `Done` |
 | **Phase 2: Core Logic & Application** | 2 | 1 | `In Progress` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **13** | **4** | **31%** |
+| **Total Global** | **13** | **5** | **38%** |
 
 ---
 
