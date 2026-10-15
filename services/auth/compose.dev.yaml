@@ -1,0 +1,42 @@
+name: fluxone-auth-dev
+
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_dev_pw}
+      POSTGRES_DB: fluxone
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_dev_pw}
+    tmpfs:
+      - /var/lib/postgresql
+    volumes:
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1 -p 5432']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  dev:
+    build:
+      context: ../..
+      dockerfile: services/auth/Dockerfile
+      target: dev
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgres://auth_svc:${AUTH_DB_PASSWORD:-auth_dev_pw}@postgres:5432/fluxone
+    volumes:
+      - ../..:/app
+      - node_modules_root:/app/node_modules
+      - node_modules_auth:/app/services/auth/node_modules
+      - npm_cache:/root/.npm
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  node_modules_root:
+  node_modules_auth:
+  npm_cache:

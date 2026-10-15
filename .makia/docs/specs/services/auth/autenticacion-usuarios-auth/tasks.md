@@ -26,7 +26,7 @@
 ## 3. Phase Breakdown & Actionable Tasks
 
 ### Phase 1: Foundation, Schemas & Core Domain
-- [ ] **Task 1.1: Entorno de contenedores de desarrollo** `[REQ-11.1, REQ-11.2, REQ-10.4]` `[DESIGN §2.3, §5]`
+- [x] **Task 1.1: Entorno de contenedores de desarrollo** `[REQ-11.1, REQ-11.2, REQ-10.4]` `[DESIGN §2.3, §5]`
   - **Archivos:**
     - `services/auth/Dockerfile` (crear; en esta tarea solo la etapa `dev`: `FROM node:24.22.0-alpine AS dev`, `RUN apk add --no-cache git`, `RUN git config --system --add safe.directory /app`, `WORKDIR /app`)
     - `services/auth/compose.dev.yaml` (solo los servicios `postgres` y `dev` y sus volúmenes con nombre)
@@ -248,11 +248,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 6 | 0 | `Pending` |
+| **Phase 1: Foundation & Domain** | 6 | 1 | `In Progress` |
 | **Phase 2: Core Logic & Application** | 3 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **0** | **0%** |
+| **Total Global** | **16** | **1** | **6%** |
 
 ---
 
