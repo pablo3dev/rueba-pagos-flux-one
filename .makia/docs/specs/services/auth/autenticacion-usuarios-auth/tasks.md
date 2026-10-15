@@ -269,6 +269,7 @@
   - **Alcance:** dejar dentro de `services/auth/` los archivos de la unidad que hoy están en la raíz del repositorio, y fusionar los dos `package.json` en el del servicio. No cambies reglas de identidad, esquema, endpoints ni el código de `src/` o `tests/`. No muevas `.makia/`, `AGENTS.md`, `CLAUDE.md`, `README.md`, el enlace `docs/` ni `.gitignore`. El contenido de `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc` y `.gitattributes` no cambia; solo su ruta. `lefthook.yml` queda como en `design.md` §5.
   - **Criterio de aceptación:** desde la raíz del repositorio, este comando termina con código 0 (el Compose de esta tarea sigue siendo el previo a la tarea 5.2, con el repositorio montado en `/app`): `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');const must=['services/auth/package.json','services/auth/package-lock.json','services/auth/tsconfig.base.json','services/auth/eslint.config.js','services/auth/.prettierrc','services/auth/.prettierignore','services/auth/.npmrc','services/auth/.gitattributes','services/auth/.dockerignore','services/auth/lefthook.yml','services/auth/.githooks/pre-commit'];const gone=['package.json','package-lock.json','tsconfig.base.json','eslint.config.js','.prettierrc','.prettierignore','.npmrc','.gitattributes','.dockerignore','lefthook.yml','.githooks/pre-commit'];for(const p of must)if(!fs.existsSync(p))process.exit(1);for(const p of gone)if(fs.existsSync(p))process.exit(1);const pkg=JSON.parse(fs.readFileSync('services/auth/package.json','utf8'));if(pkg.name!=='@fluxone/auth'||pkg.workspaces||!pkg.scripts.lint||!pkg.devDependencies.lefthook||!String(fs.readFileSync('services/auth/tsconfig.json','utf8')).includes('./tsconfig.base.json')||!fs.readFileSync('services/auth/.npmrc','utf8').includes('ignore-scripts=true'))process.exit(1)"`
   - **Evidencia:** salida de ese comando.
+  - Evidencia observada (2026-10-15): el traslado ya está en f43f47c. En el host, los 11 archivos exigidos existen bajo services/auth/ y los 11 homólogos no existen en la raíz. package.json es @fluxone/auth, sin workspaces, con script lint y devDependency lefthook; tsconfig.json extiende ./tsconfig.base.json; .npmrc contiene ignore-scripts=true. No se repitió el move.
 
 - [x] **Task 5.2: Contexto Docker y comando de la unidad** `[REQ-8.4, REQ-10.3, REQ-11.1]` `[DESIGN §2.3, §5]`
   - **Archivos:**
@@ -282,8 +283,9 @@
     - `docker compose -f compose.dev.yaml run --rm --no-deps dev node --version` (muestra `v24.22.0`)
     - `docker compose -f compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');const c=fs.readFileSync('compose.dev.yaml','utf8');if(c.includes('context: ../..')||c.includes('node_modules_root')||c.includes('node_modules_auth')||!c.includes('context: .'))process.exit(1);const d=fs.readFileSync('Dockerfile','utf8');if(!d.includes('dist/main.js')||d.includes('services/auth/dist')||d.includes('--workspace'))process.exit(1);const h=fs.readFileSync('.githooks/pre-commit','utf8');if(!h.includes('docker compose -f compose.dev.yaml')||!h.includes('cd services/auth'))process.exit(1)"`
   - **Evidencia:** salida de cada comando.
+  - Evidencia observada (2026-10-15), vía makia verify --cwd services/auth (todos PASS, código 0): docker compose -f compose.dev.yaml config -q; node --version mostró v24.22.0; el node -e del criterio (context: ., sin node_modules_root ni node_modules_auth, Dockerfile con dist/main.js y sin --workspace, hook con docker compose y cd services/auth) PASS.
 
-- [ ] **Task 5.3: Lockfile y verificación de la unidad** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-10.4, REQ-11.1, REQ-8.4]` `[DESIGN §2.3, §5, §8]`
+- [x] **Task 5.3: Lockfile y verificación de la unidad** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-10.4, REQ-11.1, REQ-8.4]` `[DESIGN §2.3, §5, §8]`
   - **Archivos:** `services/auth/package-lock.json` (regenerar con `npm install` dentro del contenedor `dev`)
   - **Depende de:** 5.2
   - **Alcance:** regenerar el lockfile del paquete único y verificar instalación, lint, tipos, pruebas, lefthook, saltos de línea y la imagen `auth`. Los comandos se ejecutan con el directorio de trabajo en `services/auth/`.
@@ -300,6 +302,7 @@
     - `docker compose -f compose.dev.yaml run --rm --no-deps --entrypoint sh auth -c "ls dist/main.js migrations && id -un"` (lista ambos y muestra `node`)
     - `docker compose -f compose.dev.yaml down -v`
   - **Evidencia:** salida de cada comando. Las pruebas deben seguir cubriendo AC-AUT-01 a AC-AUT-24, AC-AUT-26 y AC-AUT-32.
+  - Evidencia observada (2026-10-15), vía makia verify --cwd services/auth (11 comandos PASS, código 0): npm install, npm ci, npm run lint, npm run format:check, npm run typecheck, npm run test (22.5s, suites unit y db), lefthook validate con All good, comprobación LF de .gitattributes y del script de init, build auth, ls dist/main.js migrations && id -un (dist/main.js, migrations/1792022400000_create-auth-tables.sql, usuario node) y down -v. package-lock.json no cambió. Las pruebas siguen cubriendo AC-AUT-01 a AC-AUT-24, AC-AUT-26 y AC-AUT-32.
 
 ---
 
@@ -310,8 +313,8 @@
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
 | **Phase 3: Presentation & Endpoints** | 4 | 4 | `Done` |
 | **Phase 4: Verification & Polish** | 3 | 3 | `Done` |
-| **Phase 5: Límite de la unidad** | 3 | 2 | `In Progress` |
-| **Total Global** | **19** | **18** | **95%** |
+| **Phase 5: Límite de la unidad** | 3 | 3 | `Done` |
+| **Total Global** | **19** | **19** | **100%** |
 
 ---
 
