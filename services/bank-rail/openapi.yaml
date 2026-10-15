@@ -1,0 +1,237 @@
+openapi: 3.1.0
+info:
+  title: Riel bancario simulado
+  version: 1.0.0
+paths:
+  /rail/transfers:
+    post:
+      operationId: submitTransfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: Transferencia aceptada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+        '400':
+          description: 'VALIDATION_ERROR. Solicitud inválida: detalle de la primera violación.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: REFERENCE_CONFLICT. La referencia ya existe con datos distintos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: REJECTED. El banco rechazó la operación (REJECTED_BY_BANK).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: INTERNAL_ERROR. Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: UNAVAILABLE. El banco no está disponible. Reintenta más tarde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /rail/transfers/{reference}:
+    get:
+      operationId: getOperation
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 1024
+      responses:
+        '200':
+          description: Operación aceptada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+        '404':
+          description: NOT_FOUND. Recurso no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 'REJECTED. La operación fue rechazada (<reason>).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: INTERNAL_ERROR. Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: UNAVAILABLE. El banco no está disponible. Reintenta más tarde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /rail/reversals:
+    post:
+      operationId: submitReversal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReversalRequest'
+      responses:
+        '200':
+          description: Reverso aceptado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+        '400':
+          description: 'VALIDATION_ERROR. Solicitud inválida: detalle de la primera violación.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: REFERENCE_CONFLICT. La referencia ya existe con datos distintos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: >-
+            REJECTED, ORIGINAL_NOT_FOUND, ORIGINAL_NOT_ACCEPTED, AMOUNT_MISMATCH o
+            ALREADY_REVERSED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: INTERNAL_ERROR. Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: UNAVAILABLE. El banco no está disponible. Reintenta más tarde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /health:
+    get:
+      operationId: getHealth
+      responses:
+        '200':
+          description: El proceso está en marcha.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    const: ok
+components:
+  schemas:
+    TransferRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reference
+        - from
+        - to
+        - amount
+      properties:
+        reference:
+          type: string
+          maxLength: 1024
+        from:
+          type: string
+          maxLength: 1024
+        to:
+          type: string
+          maxLength: 1024
+        amount:
+          type: string
+          maxLength: 1024
+    ReversalRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reference
+        - originalReference
+        - amount
+      properties:
+        reference:
+          type: string
+          maxLength: 1024
+        originalReference:
+          type: string
+          maxLength: 1024
+        amount:
+          type: string
+          maxLength: 1024
+    OperationStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - reference
+        - status
+      properties:
+        reference:
+          type: string
+        status:
+          type: string
+          const: ACCEPTED
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - REFERENCE_CONFLICT
+                - REJECTED
+                - ORIGINAL_NOT_FOUND
+                - ORIGINAL_NOT_ACCEPTED
+                - AMOUNT_MISMATCH
+                - ALREADY_REVERSED
+                - NOT_FOUND
+                - UNAVAILABLE
+                - INTERNAL_ERROR
+            message:
+              type: string
