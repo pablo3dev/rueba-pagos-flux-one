@@ -90,8 +90,15 @@ Nada de la unidad se crea fuera de su carpeta.
 
 ### Ejecución en contenedores
 
-- Todo comando de compilación, prueba y ejecución corre en contenedores con `docker compose -f services/auth/compose.dev.yaml` (servicio `dev`).
+- Todo comando de compilación, prueba y ejecución de esta unidad se ejecuta con el directorio de trabajo en `services/auth/`, mediante `docker compose -f compose.dev.yaml` (servicio `dev`).
+- El contexto de build de ese Compose es el directorio `services/auth/`.
 - La DB de pruebas es el servicio `postgres` de ese Compose.
+
+### Archivos de la unidad
+
+- Viven en `services/auth/`: `package.json`, `package-lock.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc`, `.gitattributes`, `.dockerignore`, `lefthook.yml` y `.githooks/`.
+- El `.npmrc` de esta unidad es `services/auth/.npmrc` y contiene `ignore-scripts=true`.
+- Permanecen en la raíz del repositorio, fuera de la unidad: `.makia/`, `AGENTS.md`, `CLAUDE.md`, `README.md` y el enlace `docs/`.
 
 ### Modelo de dominio
 

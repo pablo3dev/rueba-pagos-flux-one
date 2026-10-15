@@ -14,6 +14,7 @@
 - **Test-Verified:** cada funcionalidad debe tener su prueba correspondiente antes de marcarse `[x]`. Las pruebas incluyen en su nombre el ID `[AC-AUT-NN]` del criterio que verifican.
 - **Traceability Tags:** cada tarea referencia su origen en `requirements.md` (ej. `[REQ-1.1]`) y su componente en `design.md` (ej. `[DESIGN §5]`).
 - **Rutas:** todas las rutas son relativas a la raíz del repositorio.
+- **Fase 5:** las tareas 5.1, 5.2 y 5.3 se ejecutan en este orden. El resultado deja el directorio de trabajo del host en `services/auth/` y el prefijo `docker compose -f compose.dev.yaml`. No muevas `.makia/`, `AGENTS.md`, `CLAUDE.md`, `README.md`, el enlace `docs/` ni `.gitignore`.
 - **Entorno:** todo comando se ejecuta dentro del contenedor `dev` (nada se ejecuta en el host salvo `git` y `docker`). Los comandos se lanzan desde la raíz del repositorio con el prefijo `docker compose -f services/auth/compose.dev.yaml`.
 - **Comando de prueba sin base de datos (`unit`) y de typecheck:** `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run test -w services/auth -- --project unit <ruta>`.
 - **Comando de prueba con base de datos (`db`):** `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db <ruta>` (levanta el servicio `postgres` de Compose, PostgreSQL 18.6 en la red de Compose).
@@ -248,6 +249,58 @@
   - **Evidencia:** salida de cada comando y recuento de pruebas que incluyen `[AC-AUT-` (deben aparecer los AC-AUT-01 a AC-AUT-24, AC-AUT-26 y AC-AUT-32).
     - Evidencia observada (2026-10-15), vía `makia verify --run` (8 comandos del criterio de aceptación, todos PASS, código de salida 0): `npm ci`, `npm run lint`, `npm run format:check`, `npm run typecheck --workspaces --if-present`, `npm run test --workspaces --if-present` (suites `unit` y `db` verdes contra PostgreSQL 18.6 de Compose), `lefthook validate` con `All good`, comprobación de LF en `.gitattributes` y en el script de init de Postgres, y `down -v`. Recuento: las pruebas de `services/auth/tests` incluyen 137 casos con ID `[AC-AUT-NN]` en su nombre y cubren los 26 IDs exigidos: AC-AUT-01 a AC-AUT-24, AC-AUT-26 y AC-AUT-32 (0 faltantes).
 
+### Phase 5: Límite de la unidad
+- [ ] **Task 5.1: Mover el tooling de la unidad a `services/auth/`** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-10.4]` `[DESIGN §2.7, §5]`
+  - **Archivos:**
+    - `services/auth/tsconfig.base.json` (mover desde `tsconfig.base.json`)
+    - `services/auth/eslint.config.js` (mover desde `eslint.config.js`)
+    - `services/auth/.prettierrc` (mover desde `.prettierrc`)
+    - `services/auth/.prettierignore` (mover desde `.prettierignore`)
+    - `services/auth/.npmrc` (mover desde `.npmrc`)
+    - `services/auth/.gitattributes` (mover desde `.gitattributes`)
+    - `services/auth/.dockerignore` (mover desde `.dockerignore`)
+    - `services/auth/lefthook.yml` (mover desde `lefthook.yml` y ajustar el comando `typecheck` a `npm run typecheck`; cada comando lleva `root: services/auth`)
+    - `services/auth/.githooks/pre-commit` (mover desde `.githooks/pre-commit`; el contenido se ajusta en la tarea 5.2)
+    - `services/auth/package-lock.json` (mover desde `package-lock.json`; se regenera en la tarea 5.3)
+    - `services/auth/package.json` (modificar: un solo paquete `@fluxone/auth`, sin campo `workspaces`; conserva dependencies y scripts `build`, `dev`, `start`, `typecheck`, `test`; añade `engines.node` `24.22.0`, scripts `lint`, `format`, `format:check` y las devDependencies de tooling: `eslint`, `@eslint/js`, `typescript-eslint`, `eslint-config-prettier`, `globals`, `prettier`, `lefthook`, `@types/node`, `typescript`, además de `vitest`, `tsx`, `@types/pg`)
+    - `package.json` de la raíz del repositorio (eliminar tras volcar su tooling en `services/auth/package.json`)
+    - `services/auth/tsconfig.json` (modificar: `extends` pasa de `../../tsconfig.base.json` a `./tsconfig.base.json`)
+  - **Depende de:** 4.3
+  - **Alcance:** dejar dentro de `services/auth/` los archivos de la unidad que hoy están en la raíz del repositorio, y fusionar los dos `package.json` en el del servicio. No cambies reglas de identidad, esquema, endpoints ni el código de `src/` o `tests/`. No muevas `.makia/`, `AGENTS.md`, `CLAUDE.md`, `README.md`, el enlace `docs/` ni `.gitignore`. El contenido de `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc` y `.gitattributes` no cambia; solo su ruta. `lefthook.yml` queda como en `design.md` §5.
+  - **Criterio de aceptación:** desde la raíz del repositorio, este comando termina con código 0 (el Compose de esta tarea sigue siendo el previo a la tarea 5.2, con el repositorio montado en `/app`): `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');const must=['services/auth/package.json','services/auth/package-lock.json','services/auth/tsconfig.base.json','services/auth/eslint.config.js','services/auth/.prettierrc','services/auth/.prettierignore','services/auth/.npmrc','services/auth/.gitattributes','services/auth/.dockerignore','services/auth/lefthook.yml','services/auth/.githooks/pre-commit'];const gone=['package.json','package-lock.json','tsconfig.base.json','eslint.config.js','.prettierrc','.prettierignore','.npmrc','.gitattributes','.dockerignore','lefthook.yml','.githooks/pre-commit'];for(const p of must)if(!fs.existsSync(p))process.exit(1);for(const p of gone)if(fs.existsSync(p))process.exit(1);const pkg=JSON.parse(fs.readFileSync('services/auth/package.json','utf8'));if(pkg.name!=='@fluxone/auth'||pkg.workspaces||!pkg.scripts.lint||!pkg.devDependencies.lefthook||!String(fs.readFileSync('services/auth/tsconfig.json','utf8')).includes('./tsconfig.base.json')||!fs.readFileSync('services/auth/.npmrc','utf8').includes('ignore-scripts=true'))process.exit(1)"`
+  - **Evidencia:** salida de ese comando.
+
+- [ ] **Task 5.2: Contexto Docker y comando de la unidad** `[REQ-8.4, REQ-10.3, REQ-11.1]` `[DESIGN §2.3, §5]`
+  - **Archivos:**
+    - `services/auth/compose.dev.yaml` (modificar: `context: .`, `dockerfile: Dockerfile` en `dev` y en `auth`; `dev.working_dir` `/app`; volúmenes `.:/app`, `../..:/repo`, `node_modules` en `/app/node_modules` y en `/repo/services/auth/node_modules`, `npm_cache` en `/root/.npm`; sin `node_modules_root` ni `node_modules_auth`)
+    - `services/auth/Dockerfile` (modificar: `safe.directory` `/app` y `/repo`; etapas `build` y runtime con `npm ci` y `npm run build` sin workspaces; copiar `dist` y `migrations` a `/app`; `CMD ["node","dist/main.js"]`)
+    - `services/auth/.githooks/pre-commit` (modificar al contenido exacto de `design.md` §2.3; `git update-index --add --chmod=+x services/auth/.githooks/pre-commit`)
+  - **Depende de:** 5.1
+  - **Alcance:** el contexto de build es el directorio `services/auth/`. El comando que levanta la unidad se ejecuta con el directorio de trabajo en `services/auth/`. El hook, invocado por git desde la raíz del repositorio, entra en `services/auth/` y ejecuta `docker compose -f compose.dev.yaml run --rm -T --no-deps -w /repo dev npx lefthook run pre-commit --config services/auth/lefthook.yml --no-auto-install`. No cambies el servicio `postgres` ni el negocio de identidad.
+  - **Criterio de aceptación:** todos con código de salida 0, ejecutados con el directorio de trabajo en `services/auth/`:
+    - `docker compose -f compose.dev.yaml config -q`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev node --version` (muestra `v24.22.0`)
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');const c=fs.readFileSync('compose.dev.yaml','utf8');if(c.includes('context: ../..')||c.includes('node_modules_root')||c.includes('node_modules_auth')||!c.includes('context: .'))process.exit(1);const d=fs.readFileSync('Dockerfile','utf8');if(!d.includes('dist/main.js')||d.includes('services/auth/dist')||d.includes('--workspace'))process.exit(1);const h=fs.readFileSync('.githooks/pre-commit','utf8');if(!h.includes('docker compose -f compose.dev.yaml')||!h.includes('cd services/auth'))process.exit(1)"`
+  - **Evidencia:** salida de cada comando.
+
+- [ ] **Task 5.3: Lockfile y verificación de la unidad** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-10.4, REQ-11.1, REQ-8.4]` `[DESIGN §2.3, §5, §8]`
+  - **Archivos:** `services/auth/package-lock.json` (regenerar con `npm install` dentro del contenedor `dev`)
+  - **Depende de:** 5.2
+  - **Alcance:** regenerar el lockfile del paquete único y verificar instalación, lint, tipos, pruebas, lefthook, saltos de línea y la imagen `auth`. Los comandos se ejecutan con el directorio de trabajo en `services/auth/`.
+  - **Criterio de aceptación:** todos con código de salida 0, en este orden, con el directorio de trabajo en `services/auth/`:
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm install`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm ci`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run lint`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run format:check`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run typecheck`
+    - `docker compose -f compose.dev.yaml run --rm dev npm run test`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev sh -c "git init -q /tmp/lh && cp lefthook.yml /tmp/lh/ && cd /tmp/lh && /app/node_modules/.bin/lefthook validate | grep -q 'All good'"`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');if(!fs.readFileSync('.gitattributes','utf8').includes('Dockerfile* text eol=lf')||fs.readFileSync('docker/postgres-init/01-auth-role-schema.sh','utf8').includes('\r'))process.exit(1)"`
+    - `docker compose -f compose.dev.yaml build auth`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps --entrypoint sh auth -c "ls dist/main.js migrations && id -un"` (lista ambos y muestra `node`)
+    - `docker compose -f compose.dev.yaml down -v`
+  - **Evidencia:** salida de cada comando. Las pruebas deben seguir cubriendo AC-AUT-01 a AC-AUT-24, AC-AUT-26 y AC-AUT-32.
+
 ---
 
 ## 4. Execution Progress Tracker
@@ -257,7 +310,8 @@
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
 | **Phase 3: Presentation & Endpoints** | 4 | 4 | `Done` |
 | **Phase 4: Verification & Polish** | 3 | 3 | `Done` |
-| **Total Global** | **16** | **16** | **100%** |
+| **Phase 5: Límite de la unidad** | 3 | 0 | `Pending` |
+| **Total Global** | **19** | **16** | **84%** |
 
 ---
 
