@@ -218,7 +218,7 @@
   - **Criterio de aceptación:** `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db tests/acceptance/openapi.test.ts`
   - **Evidencia:** `[AC-AUT-26]` el archivo declara `openapi: 3.1.x` y describe cada ruta y método de `design.md § 4.2` con sus respuestas de éxito y error, el esquema de error `{error:{code,message}}`, la cookie `refresh_token` y el esquema bearer.
 
-- [ ] **Task 4.2: [P] Imagen de contenedor del servicio y ejecución en Compose** `[REQ-8.4]` `[DESIGN §5]`
+- [x] **Task 4.2: [P] Imagen de contenedor del servicio y ejecución en Compose** `[REQ-8.4]` `[DESIGN §5]`
   - **Archivos:**
     - `services/auth/Dockerfile` (modificar: añadir las etapas `build` y runtime tras la etapa `dev` de 1.1, según `design.md § 5`; el `.dockerignore` raíz ya existe desde 1.1)
     - `services/auth/compose.dev.yaml` (modificar: añadir el servicio `auth`: build del Dockerfile con el contexto en la raíz del repositorio, puerto `3001:3001`, variables `PORT`, `DATABASE_URL`, `COOKIE_SECRET`, `COOKIE_SECURE=false` y `DEMO_USERS_PASSWORD`, `depends_on` con `postgres` en estado healthy, healthcheck con `wget` a `/health/ready`)
@@ -255,8 +255,8 @@
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
 | **Phase 3: Presentation & Endpoints** | 4 | 4 | `Done` |
-| **Phase 4: Verification & Polish** | 3 | 1 | `In Progress` |
-| **Total Global** | **16** | **14** | **88%** |
+| **Phase 4: Verification & Polish** | 3 | 2 | `In Progress` |
+| **Total Global** | **16** | **15** | **94%** |
 
 ---
 

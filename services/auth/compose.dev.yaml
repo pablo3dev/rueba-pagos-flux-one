@@ -36,6 +36,28 @@ services:
       postgres:
         condition: service_healthy
 
+  auth:
+    build:
+      context: ../..
+      dockerfile: services/auth/Dockerfile
+    environment:
+      PORT: '3001'
+      DATABASE_URL: postgres://auth_svc:${AUTH_DB_PASSWORD:-auth_dev_pw}@postgres:5432/fluxone
+      COOKIE_SECRET: ${COOKIE_SECRET:-dev_cookie_secret_0123456789abcdef0123}
+      COOKIE_SECURE: 'false'
+      DEMO_USERS_PASSWORD: ${DEMO_USERS_PASSWORD:-demo_password_123}
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3001/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
 volumes:
   node_modules_root:
   node_modules_auth:
