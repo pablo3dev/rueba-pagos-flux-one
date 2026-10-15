@@ -1,6 +1,6 @@
-﻿# reversos-transferencias-web
+# reversos-transferencias-web
 
-> Reversar desde el portal
+> En la pantalla de una transferencia completada el cliente puede reversarla una sola vez. El botón no aparece si no está completada y no se puede pulsar dos veces para la misma intención.
 
 ## Estado
 
@@ -10,17 +10,21 @@
 
 ## Objetivo
 
-La pantalla de estado ofrece Reversar solo si la transferencia está COMPLETED, sin doble envío, y muestra el estado del reverso.
+En la pantalla de una transferencia completada el cliente puede reversarla una sola vez. El botón no aparece si no está completada y no se puede pulsar dos veces para la misma intención.
 
 ## Avance
 
 | Fase | Estado |
 |:---|:---:|
-| Spec | `Completado` |
-| Implementación | `Completado` |
+| Phase 1: Foundation, Schemas & Core Domain | `Completado` |
+| Phase 2: Core Logic & Application Layer | `Completado` |
+| Phase 3: Presentation, Endpoints & Integration | `Completado` |
+| Phase 4: Verification, Testing & Polish | `Completado` |
 
-**Progreso global:** `100%`
+**Progreso global:** `100%` (8 de 8 tareas completadas)
 
 ## Qué puede hacer ya el usuario / Qué falta
 
-- [x] Reversar desde el portal
+- [x] Mostrar Reversar solo si el estado es COMPLETED.
+- [x] Enviar el reverso con su propia clave de idempotencia.
+- [x] Mostrar el estado del reverso.
