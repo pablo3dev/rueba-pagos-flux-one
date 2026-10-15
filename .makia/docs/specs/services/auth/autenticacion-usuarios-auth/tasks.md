@@ -211,7 +211,7 @@
     - Evidencia observada (2026-10-15): `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db --reporter=verbose tests/acceptance/operability.test.ts` → 1 archivo y 4 pruebas pasan contra PostgreSQL 18.6 de Compose: `✓ [AC-AUT-22] /health/ready devuelve 503 con el pool cerrado y /health/live sigue en 200`; `✓ [AC-AUT-23] una ruta inexistente responde 404 NOT_FOUND con el formato uniforme`; `✓ [AC-AUT-23] un error inesperado responde 500 INTERNAL_ERROR con cuerpo genérico y queda en el log`; `✓ [AC-AUT-24] los logs registran los eventos de auth sin contraseña, token, cookie ni email en el login fallido`.
 
 ### Phase 4: Verification, Testing & Polish
-- [ ] **Task 4.1: [P] Contrato OpenAPI 3.1** `[REQ-9.1]` `[DESIGN §4.2, §8.3]`
+- [x] **Task 4.1: [P] Contrato OpenAPI 3.1** `[REQ-9.1]` `[DESIGN §4.2, §8.3]`
   - **Archivos:** `services/auth/openapi.yaml`, `services/auth/tests/acceptance/openapi.test.ts`
   - **Depende de:** 3.3
   - **Alcance:** documentar el contrato HTTP del servicio en OpenAPI 3.1 y verificarlo con una prueba.
@@ -255,8 +255,8 @@
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
 | **Phase 3: Presentation & Endpoints** | 4 | 4 | `Done` |
-| **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **13** | **81%** |
+| **Phase 4: Verification & Polish** | 3 | 1 | `In Progress` |
+| **Total Global** | **16** | **14** | **88%** |
 
 ---
 
