@@ -22,9 +22,9 @@ El servicio se compila, prueba y ejecuta solo con Docker, sin instalar nada en e
 | Phase 2: Core Logic & Application Layer | `Completado` |
 | Phase 3: Presentation, Endpoints & Integration | `Completado` |
 | Phase 4: Verification, Testing & Polish | `Completado` |
-| Phase 5: Límite de la unidad | `Pendiente` |
+| Phase 5: Límite de la unidad | `En progreso` |
 
-**Progreso global:** `84%` (16 de 19 tareas completadas)
+**Progreso global:** `89%` (17 de 19 tareas completadas)
 
 ## Qué puede hacer ya el usuario / Qué falta
 
