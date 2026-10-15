@@ -1,0 +1,355 @@
+openapi: 3.1.0
+info:
+  title: Servicio de identidad (auth)
+  version: 1.0.0
+  description: >-
+    Registro, inicio de sesión, renovación y cierre de sesión, perfil, llaves públicas
+    (JWKS) y salud del servicio de identidad. El servicio escucha en el puerto 3001; el
+    proxy inverso del portal expone las rutas bajo `/api/auth` (por eso la cookie de
+    refresco usa `Path=/api/auth`) y las rutas de este contrato no llevan ese prefijo.
+    Todo error usa el formato `{"error":{"code","message"}}`; una ruta inexistente
+    responde 404 `NOT_FOUND` y un error no controlado 500 `INTERNAL_ERROR`.
+servers:
+  - url: http://localhost:3001
+    description: Servicio en Compose
+tags:
+  - name: auth
+    description: Cuentas y sesiones
+  - name: jwks
+    description: Llaves públicas de verificación
+  - name: health
+    description: Salud del servicio
+paths:
+  /auth/register:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Registra una cuenta nueva
+      description: Límite de 10 solicitudes por minuto por IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+            example:
+              email: nuevo@fluxone.test
+              password: una-clave-segura-123
+      responses:
+        '201':
+          description: Cuenta creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: >-
+            VALIDATION_ERROR. El cuerpo no cumple el esquema, el email es inválido o la
+            contraseña está fuera de 12 a 128 caracteres.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: EMAIL_TAKEN. El correo ya está registrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Inicia sesión
+      description: >-
+        Devuelve el access token en el cuerpo y emite la cookie `refresh_token`. Límite
+        de 5 solicitudes por minuto por IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+            example:
+              email: alice@fluxone.test
+              password: clave-demo-123456
+      responses:
+        '200':
+          description: Sesión iniciada.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetRefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: VALIDATION_ERROR. El cuerpo no cumple el esquema.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: >-
+            INVALID_CREDENTIALS. El email no existe o la contraseña es incorrecta (mismo
+            mensaje en ambos casos).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refresh
+      summary: Renueva la sesión
+      description: >-
+        Sin cuerpo. Rota el refresh token de la cookie `refresh_token` y emite una cookie
+        nueva. Sin límite de intentos.
+      security:
+        - refreshCookie: []
+      responses:
+        '200':
+          description: Sesión renovada.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetRefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          description: >-
+            REFRESH_TOKEN_INVALID (cookie ausente, firma inválida, token desconocido o
+            expirado) o REFRESH_TOKEN_REUSED (token ya rotado o revocado). En ambos casos
+            se limpia la cookie.
+          headers:
+            Set-Cookie:
+              description: Limpia la cookie `refresh_token`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Cierra la sesión
+      description: >-
+        Sin cuerpo. Responde siempre 204, con o sin cookie y con token válido, desconocido
+        o ya revocado; limpia la cookie `refresh_token`.
+      security:
+        - refreshCookie: []
+        - {}
+      responses:
+        '204':
+          description: Sesión cerrada; sin cuerpo.
+          headers:
+            Set-Cookie:
+              description: Limpia la cookie `refresh_token`.
+              schema:
+                type: string
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: getProfile
+      summary: Devuelve el perfil del usuario autenticado
+      description: Toma los datos de los claims del token, sin consultar la base de datos.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil del usuario.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: >-
+            UNAUTHORIZED. Cabecera ausente, esquema distinto de Bearer, token expirado, o
+            firma, `iss` o `aud` inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /.well-known/jwks.json:
+    get:
+      tags: [jwks]
+      operationId: getJwks
+      summary: Publica las llaves públicas de firma
+      responses:
+        '200':
+          description: Conjunto de llaves públicas (nunca incluye la parte privada).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwks'
+  /health/live:
+    get:
+      tags: [health]
+      operationId: healthLive
+      summary: Comprueba que el proceso está vivo
+      responses:
+        '200':
+          description: El proceso responde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: healthReady
+      summary: Comprueba que el servicio puede atender solicitudes
+      responses:
+        '200':
+          description: La base de datos responde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+        '503':
+          description: La base de datos no responde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: unavailable
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token EdDSA emitido por el login o la renovación.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: >-
+        Cookie firmada, HttpOnly, SameSite=Strict, Path=/api/auth y vigencia de 7 días.
+  headers:
+    SetRefreshCookie:
+      description: >-
+        Cookie `refresh_token=<valor firmado>; Max-Age=604800; Path=/api/auth; HttpOnly;
+        Secure; SameSite=Strict`.
+      schema:
+        type: string
+  responses:
+    RateLimited:
+      description: RATE_LIMITED. Demasiados intentos; reintenta en un minuto.
+      headers:
+        Retry-After:
+          description: Segundos de espera antes de reintentar.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - EMAIL_TAKEN
+                - INVALID_CREDENTIALS
+                - RATE_LIMITED
+                - REFRESH_TOKEN_INVALID
+                - REFRESH_TOKEN_REUSED
+                - UNAUTHORIZED
+                - NOT_FOUND
+                - INTERNAL_ERROR
+            message:
+              type: string
+              description: Mensaje en español, sin datos sensibles.
+    Credentials:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          maxLength: 1024
+        password:
+          type: string
+          maxLength: 1024
+    User:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+    Session:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+          description: JWT firmado con EdDSA.
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          description: Vigencia del access token en segundos.
+          examples: [900]
+        user:
+          $ref: '#/components/schemas/User'
+    Jwks:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicJwk'
+    PublicJwk:
+      type: object
+      required: [kty, crv, x, kid, alg, use]
+      properties:
+        kty:
+          type: string
+          const: OKP
+        crv:
+          type: string
+          const: Ed25519
+        x:
+          type: string
+          description: Llave pública en base64url.
+        kid:
+          type: string
+        alg:
+          type: string
+          const: EdDSA
+        use:
+          type: string
+          const: sig
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
