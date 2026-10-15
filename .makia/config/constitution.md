@@ -17,32 +17,12 @@ Rellena SOLO lo que aplica y BORRA el resto. Nada se inventa para completar una 
 
 Ámbito: todo el proyecto o más de una unidad.
 
-### Ejemplo de título: Principios fundamentales
+### Configuración host
 
-<!-- Decisiones técnicas guiadas por negocio, mercado, UX, datos y arquitectura. -->
+El ambiente del proyecto debe ser **100 % Docker** para que sea portable.
 
-### Ejemplo de título: Configuración host
-
-<!-- Qué necesita la máquina host para ejecutar el proyecto. -->
-
-### Ejemplo de título: Configuración de plataforma destino
-
-<!-- Qué tener o hacer para compilar a la plataforma destino. -->
-
-### Ejemplo de título: Principios de seguridad
-
-<!-- Reglas de seguridad del proyecto que todo cambio debe cumplir. -->
-
-### Ejemplo de título: Estrategias de implementación
-
-<!-- Cómo se prefiere implementar: patrones, orden, límites. -->
-
-## Unidad: <ruta de la unidad, p. ej. apps/cli>
-
-Ámbito: solo esta unidad. Duplica y renombra este bloque por cada unidad con directrices propias; bórralo si ninguna las tiene.
-
-### Ejemplo de título: Estrategias de implementación
-
-<!-- Directrices que aplican solo a esta unidad. Sus títulos `###` son adaptables, con las mismas reglas que en Global. -->
+- Todo se compila dentro de contenedores.
+- Todo se ejecuta dentro de contenedores.
+- No se instala nada en el dispositivo host.
 
 > **Seguridad:** ningún token, credencial o valor sensible se escribe aquí en texto plano — siempre `${NOMBRE_VARIABLE}` resuelto desde el entorno. Este archivo vive en `.makia/config/constitution.md` de cada proyecto, se versiona, y nunca se genera con contenido inventado por MakIA.
