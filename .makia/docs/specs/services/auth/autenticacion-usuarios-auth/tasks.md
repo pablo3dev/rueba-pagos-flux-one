@@ -319,12 +319,12 @@
 ---
 
 ## 5. Definition of Done (DoD) Gate
-- [ ] Todas las tareas están marcadas como completadas (`[x]`).
-- [ ] Todos los criterios EARS de `requirements.md` pasan las pruebas asociadas.
-- [ ] Los 32 criterios AC-AUT-01..32 pasan su verificación (ver la tabla de trazabilidad de `requirements.md`).
-- [ ] La estructura de archivos coincide con el mapeo de `design.md`.
-- [ ] Todos los tests unitarios, de integración y E2E pasan sin advertencias críticas.
-- [ ] La fila del spec en `.makia/docs/specs/services/auth/INDEX.md` está sincronizada con el `Estado global` de `summary.md`.
+- [x] Todas las tareas están marcadas como completadas (`[x]`).
+- [x] Todos los criterios EARS de `requirements.md` pasan las pruebas asociadas.
+- [x] Los 32 criterios AC-AUT-01..32 pasan su verificación (ver la tabla de trazabilidad de `requirements.md`).
+- [x] La estructura de archivos coincide con el mapeo de `design.md`.
+- [x] Todos los tests unitarios, de integración y E2E pasan sin advertencias críticas.
+- [x] La fila del spec en `.makia/docs/specs/services/auth/INDEX.md` está sincronizada con el `Estado global` de `summary.md`.
 
 ---
 
