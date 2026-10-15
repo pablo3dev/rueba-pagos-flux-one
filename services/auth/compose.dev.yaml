@@ -29,7 +29,9 @@ services:
       DATABASE_URL: postgres://auth_svc:${AUTH_DB_PASSWORD:-auth_dev_pw}@postgres:5432/fluxone
     volumes:
       - .:/app
+      - ../..:/repo
       - node_modules:/app/node_modules
+      - node_modules:/repo/services/auth/node_modules
       - npm_cache:/root/.npm
     depends_on:
       postgres:

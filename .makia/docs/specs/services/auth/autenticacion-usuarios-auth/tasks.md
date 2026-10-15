@@ -250,7 +250,7 @@
     - Evidencia observada (2026-10-15), vía `makia verify --run` (8 comandos del criterio de aceptación, todos PASS, código de salida 0): `npm ci`, `npm run lint`, `npm run format:check`, `npm run typecheck --workspaces --if-present`, `npm run test --workspaces --if-present` (suites `unit` y `db` verdes contra PostgreSQL 18.6 de Compose), `lefthook validate` con `All good`, comprobación de LF en `.gitattributes` y en el script de init de Postgres, y `down -v`. Recuento: las pruebas de `services/auth/tests` incluyen 137 casos con ID `[AC-AUT-NN]` en su nombre y cubren los 26 IDs exigidos: AC-AUT-01 a AC-AUT-24, AC-AUT-26 y AC-AUT-32 (0 faltantes).
 
 ### Phase 5: Límite de la unidad
-- [ ] **Task 5.1: Mover el tooling de la unidad a `services/auth/`** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-10.4]` `[DESIGN §2.7, §5]`
+- [x] **Task 5.1: Mover el tooling de la unidad a `services/auth/`** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-10.4]` `[DESIGN §2.7, §5]`
   - **Archivos:**
     - `services/auth/tsconfig.base.json` (mover desde `tsconfig.base.json`)
     - `services/auth/eslint.config.js` (mover desde `eslint.config.js`)
@@ -270,7 +270,7 @@
   - **Criterio de aceptación:** desde la raíz del repositorio, este comando termina con código 0 (el Compose de esta tarea sigue siendo el previo a la tarea 5.2, con el repositorio montado en `/app`): `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');const must=['services/auth/package.json','services/auth/package-lock.json','services/auth/tsconfig.base.json','services/auth/eslint.config.js','services/auth/.prettierrc','services/auth/.prettierignore','services/auth/.npmrc','services/auth/.gitattributes','services/auth/.dockerignore','services/auth/lefthook.yml','services/auth/.githooks/pre-commit'];const gone=['package.json','package-lock.json','tsconfig.base.json','eslint.config.js','.prettierrc','.prettierignore','.npmrc','.gitattributes','.dockerignore','lefthook.yml','.githooks/pre-commit'];for(const p of must)if(!fs.existsSync(p))process.exit(1);for(const p of gone)if(fs.existsSync(p))process.exit(1);const pkg=JSON.parse(fs.readFileSync('services/auth/package.json','utf8'));if(pkg.name!=='@fluxone/auth'||pkg.workspaces||!pkg.scripts.lint||!pkg.devDependencies.lefthook||!String(fs.readFileSync('services/auth/tsconfig.json','utf8')).includes('./tsconfig.base.json')||!fs.readFileSync('services/auth/.npmrc','utf8').includes('ignore-scripts=true'))process.exit(1)"`
   - **Evidencia:** salida de ese comando.
 
-- [ ] **Task 5.2: Contexto Docker y comando de la unidad** `[REQ-8.4, REQ-10.3, REQ-11.1]` `[DESIGN §2.3, §5]`
+- [x] **Task 5.2: Contexto Docker y comando de la unidad** `[REQ-8.4, REQ-10.3, REQ-11.1]` `[DESIGN §2.3, §5]`
   - **Archivos:**
     - `services/auth/compose.dev.yaml` (modificar: `context: .`, `dockerfile: Dockerfile` en `dev` y en `auth`; `dev.working_dir` `/app`; volúmenes `.:/app`, `../..:/repo`, `node_modules` en `/app/node_modules` y en `/repo/services/auth/node_modules`, `npm_cache` en `/root/.npm`; sin `node_modules_root` ni `node_modules_auth`)
     - `services/auth/Dockerfile` (modificar: `safe.directory` `/app` y `/repo`; etapas `build` y runtime con `npm ci` y `npm run build` sin workspaces; copiar `dist` y `migrations` a `/app`; `CMD ["node","dist/main.js"]`)
@@ -310,8 +310,8 @@
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
 | **Phase 3: Presentation & Endpoints** | 4 | 4 | `Done` |
 | **Phase 4: Verification & Polish** | 3 | 3 | `Done` |
-| **Phase 5: Límite de la unidad** | 3 | 0 | `Pending` |
-| **Total Global** | **19** | **16** | **84%** |
+| **Phase 5: Límite de la unidad** | 3 | 2 | `In Progress` |
+| **Total Global** | **19** | **18** | **95%** |
 
 ---
 
