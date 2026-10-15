@@ -12,6 +12,7 @@
 
 Permitir que cada cliente se identifique de forma segura y que los demás servicios confíen en esa identidad.
 Además deja lista la base del repositorio (calidad automática antes de cada commit), el contrato documentado del servicio y su empaquetado.
+El servicio se compila, prueba y ejecuta solo con Docker, sin instalar nada en el equipo del desarrollador.
 
 ## Avance
 
@@ -22,7 +23,7 @@ Además deja lista la base del repositorio (calidad automática antes de cada co
 | Phase 3: Presentation, Endpoints & Integration | `Pendiente` |
 | Phase 4: Verification, Testing & Polish | `Pendiente` |
 
-**Progreso global:** `0%` (0 de 15 tareas completadas)
+**Progreso global:** `0%` (0 de 16 tareas completadas)
 
 ## Qué puede hacer ya el usuario / Qué falta
 
@@ -35,8 +36,9 @@ Además deja lista la base del repositorio (calidad automática antes de cada co
 - [ ] Usuarios demo disponibles (alice, bob, carol)
 - [ ] Estado de salud del servicio
 - [ ] Contrato HTTP documentado (OpenAPI)
-- [ ] Imagen de contenedor del servicio
-- [ ] Verificación automática de lint, formato y tipos antes de cada commit
+- [ ] Imagen de contenedor del servicio, ejecutable en Compose junto a su PostgreSQL
+- [ ] Verificación automática de lint, formato y tipos antes de cada commit (ejecutada en un contenedor)
+- [ ] Entorno de desarrollo en contenedores (Node 24.22.0 y PostgreSQL 18.6 con Docker Compose, sin instalar nada en el equipo)
 
 ## Coordinación multi-unidad
 

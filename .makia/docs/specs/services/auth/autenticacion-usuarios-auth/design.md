@@ -3,7 +3,9 @@
 ## 1. Metadata & Traceability
 - **Spec:** `autenticacion-usuarios-auth`
 - **Requirements Ref:** `requirements.md` (spec: `autenticacion-usuarios-auth`)
-- **Target Stack:** Node.js 24.22.0 (`node:24.22.0-alpine`), TypeScript 6.0.3 ESM estricto, Fastify 5.12.7, pg 8.23.1, node-pg-migrate 9.0.0, jose 6.2.12, @node-rs/argon2 2.2.2, @fastify/rate-limit 11.2.1, @fastify/cookie 11.1.3, PostgreSQL 18.6, Vitest 5.0.5, Testcontainers 12.2.1 (+ @testcontainers/postgresql 12.2.1), tsx 4.23.15, @types/pg 8.23.1. Raíz del monorepo: ESLint 10.12.0, @eslint/js 10.0.1, typescript-eslint 8.71.2, eslint-config-prettier 10.1.8, globals 17.13.0, Prettier 3.9.10, lefthook 2.1.12, @types/node 24.19.2, typescript 6.0.3.
+- **Target Stack:** Node.js 24.22.0 (`node:24.22.0-alpine`), TypeScript 6.0.3 ESM estricto, Fastify 5.12.7, pg 8.23.1, node-pg-migrate 9.0.0, jose 6.2.12, @node-rs/argon2 2.2.2, @fastify/rate-limit 11.2.1, @fastify/cookie 11.1.3, PostgreSQL 18.6, Vitest 5.0.5, tsx 4.23.15, @types/pg 8.23.1. Raíz del monorepo: ESLint 10.12.0, @eslint/js 10.0.1, typescript-eslint 8.71.2, eslint-config-prettier 10.1.8, globals 17.13.0, Prettier 3.9.10, lefthook 2.1.12, @types/node 24.19.2, typescript 6.0.3.
+- **Contenedores:** imágenes `node:24.22.0-alpine` (derivada con `git` para la etapa `dev` del `Dockerfile`) y `postgres:18.6-alpine`, orquestadas con Docker Compose.
+- **Host:** solo Docker y Git; todo comando de compilación, prueba y ejecución corre en contenedores.
 - **Versiones:** exactas, sin `^` ni `~`, tanto en `package.json` de la raíz como en `services/auth/package.json`.
 - **Modelo de dominio:** `../domain-model.md` (Contexto Delimitado de Identidad). **Esquema DB:** `db-design.dbml` (misma carpeta que este documento).
 
@@ -54,6 +56,156 @@ graph TD
     PG --> DB
 ```
 
+### 2.3 Entorno de ejecución en contenedores
+
+El host solo tiene Docker y Git: no se instala nada en él y todo comando de compilación, prueba y ejecución corre dentro de contenedores. El Compose de este servicio es `services/auth/compose.dev.yaml` (proyecto Compose `fluxone-auth-dev`); es un archivo propio, independiente de cualquier otro Compose del repositorio. Lo crea la tarea 1.1 con los servicios `postgres` y `dev`; la tarea 4.2 le añade el servicio `auth`.
+
+**Servicios**
+
+| Servicio | Imagen / build | Puertos | Volúmenes | Healthcheck | Propósito |
+|:---|:---|:---|:---|:---|:---|
+| `postgres` | `postgres:18.6-alpine` | ninguno publicado | `tmpfs` en `/var/lib/postgresql` (sin persistencia); `./docker/postgres-init` en `/docker-entrypoint-initdb.d` (solo lectura) | `pg_isready` cada 5 s (`start_period` 10 s, 5 reintentos) | PostgreSQL de desarrollo y de pruebas; el script de inicialización crea el rol `auth_svc` y el esquema `auth_schema` |
+| `dev` | build de `services/auth/Dockerfile`, etapa `dev` (`node:24.22.0-alpine` + `git`), contexto = raíz del repositorio | ninguno | raíz del repositorio en `/app` (bind mount); volúmenes con nombre `node_modules_root`, `node_modules_auth`, `npm_cache` | ninguno | Ejecuta todos los comandos de compilación, lint, tipos, pruebas, instalación y lefthook |
+| `auth` (tarea 4.2) | build de `services/auth/Dockerfile` (etapa runtime), contexto = raíz del repositorio | `3001:3001` | ninguno | `wget` a `/health/ready` cada 5 s (`start_period` 10 s, 10 reintentos) | Servicio de identidad en ejecución |
+
+**Comandos.** Prefijo de todo comando: `docker compose -f services/auth/compose.dev.yaml`. Sin DB: `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev <cmd>`; con DB: `docker compose -f services/auth/compose.dev.yaml run --rm dev <cmd>` (levanta `postgres` y espera su healthcheck).
+
+| Acción | Comando |
+|:---|:---|
+| Instalar dependencias (genera `package-lock.json` en la tarea 1.4; después `npm ci`) | `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm install` / `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm ci` |
+| Compilar | `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run build -w services/auth` |
+| Lint | `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run lint` |
+| Formato | `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run format:check` |
+| Tipos | `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run typecheck --workspaces --if-present` |
+| Pruebas `unit` | `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run test -w services/auth -- --project unit` |
+| Pruebas `db` | `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db` |
+| Todas las pruebas | `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test --workspaces --if-present` |
+| Validar `lefthook.yml` (repositorio temporal dentro del contenedor; el comando falla con exit ≠ 0 si la salida no contiene `All good`, porque `lefthook validate` sale 0 sin validar si no hay repositorio git) | `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev sh -c "git init -q /tmp/lh && cp lefthook.yml /tmp/lh/ && cd /tmp/lh && /app/node_modules/.bin/lefthook validate \| grep -q 'All good'"` |
+| Construir la imagen runtime (tarea 4.2) | `docker compose -f services/auth/compose.dev.yaml build auth` |
+| Levantar `auth` (tarea 4.2) | `docker compose -f services/auth/compose.dev.yaml up -d --wait auth` |
+| Alcanzar `auth` por la red de Compose (tarea 4.2) | `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "fetch('http://auth:3001/.well-known/jwks.json').then((r) => process.exit(r.ok ? 0 : 1))"` |
+| Limpiar contenedores y volúmenes | `docker compose -f services/auth/compose.dev.yaml down -v` |
+
+**Red.** Los servicios comparten la red por defecto del proyecto Compose: cualquier otro contenedor llega a PostgreSQL por `postgres:5432`, no por un puerto del host (la DB no publica puertos).
+
+**Ownership y volúmenes.** `node_modules` vive en volúmenes con nombre (`node_modules_root` en `/app/node_modules`, `node_modules_auth` en `/app/services/auth/node_modules`) y la caché de npm en `npm_cache` (`/root/.npm`): así no se escriben binarios Linux en el árbol del host y el bind mount es más rápido en Docker Desktop. Los archivos que el contenedor `dev` escribe en el árbol (lockfile, `dist`, salidas de `--fix`) los crea `root` dentro del contenedor; el `Dockerfile` registra `/app` como `safe.directory` de git para que `git` funcione sobre el bind mount.
+
+**Contenido exacto de `services/auth/compose.dev.yaml` (tarea 1.1).** Las credenciales son valores de desarrollo desechables con valor por defecto sobreescribible por variable de entorno; no son secretos del proyecto porque la DB no publica puertos y no persiste datos.
+
+```yaml
+name: fluxone-auth-dev
+
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_dev_pw}
+      POSTGRES_DB: fluxone
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_dev_pw}
+    tmpfs:
+      - /var/lib/postgresql
+    volumes:
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1 -p 5432']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  dev:
+    build:
+      context: ../..
+      dockerfile: services/auth/Dockerfile
+      target: dev
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgres://auth_svc:${AUTH_DB_PASSWORD:-auth_dev_pw}@postgres:5432/fluxone
+    volumes:
+      - ../..:/app
+      - node_modules_root:/app/node_modules
+      - node_modules_auth:/app/services/auth/node_modules
+      - npm_cache:/root/.npm
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  node_modules_root:
+  node_modules_auth:
+  npm_cache:
+```
+
+**Servicio `auth` (tarea 4.2).** Se añade bajo `services:` de `compose.dev.yaml`:
+
+```yaml
+  auth:
+    build:
+      context: ../..
+      dockerfile: services/auth/Dockerfile
+    environment:
+      PORT: '3001'
+      DATABASE_URL: postgres://auth_svc:${AUTH_DB_PASSWORD:-auth_dev_pw}@postgres:5432/fluxone
+      COOKIE_SECRET: ${COOKIE_SECRET:-dev_cookie_secret_0123456789abcdef0123}
+      COOKIE_SECURE: 'false'
+      DEMO_USERS_PASSWORD: ${DEMO_USERS_PASSWORD:-demo_password_123}
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3001/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+```
+
+**Contenido exacto de `services/auth/docker/postgres-init/01-auth-role-schema.sh` (tarea 1.1).** Saltos de línea LF. El entrypoint de `postgres` lo ejecuta o lo carga con `source`, así que no depende del bit ejecutable; corre solo cuando el directorio de datos está vacío.
+
+```sh
+#!/bin/sh
+# Rol y esquema de auth para desarrollo y pruebas en Compose (solo este servicio).
+set -eu
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<EOSQL
+REVOKE CREATE, USAGE ON SCHEMA public FROM PUBLIC;
+REVOKE CONNECT ON DATABASE ${POSTGRES_DB} FROM PUBLIC;
+CREATE ROLE auth_svc LOGIN PASSWORD '${AUTH_DB_PASSWORD}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO auth_svc;
+CREATE SCHEMA auth_schema AUTHORIZATION auth_svc;
+ALTER ROLE auth_svc IN DATABASE ${POSTGRES_DB} SET search_path = auth_schema;
+EOSQL
+```
+
+**Contenido exacto de la etapa `dev` de `services/auth/Dockerfile` (tarea 1.1).** Es la primera etapa del archivo:
+
+```dockerfile
+FROM node:24.22.0-alpine AS dev
+RUN apk add --no-cache git \
+  && git config --system --add safe.directory /app
+WORKDIR /app
+```
+
+**Contenido exacto de `.githooks/pre-commit` (tarea 1.2).** Saltos de línea LF; se marca ejecutable con `git update-index --add --chmod=+x .githooks/pre-commit`. `lefthook run` necesita `git` en el contenedor (por eso la imagen `dev` lo incluye) y calcula `{staged_files}` con git; `stage_fixed` ejecuta `git add` dentro del contenedor. Cada clon activa el hook una sola vez con `git config core.hooksPath .githooks`.
+
+```sh
+#!/bin/sh
+# Hook de git del host: lefthook corre dentro del contenedor Node (el host solo tiene Git y Docker).
+if [ ! -d .git ]; then
+  echo 'pre-commit: .git no es un directorio (git worktree); verificación omitida' >&2
+  exit 0
+fi
+exec docker compose -f services/auth/compose.dev.yaml run --rm -T --no-deps dev npx lefthook run pre-commit --no-auto-install
+```
+
+**Contenido exacto de `.npmrc` (tarea 1.3):** una línea.
+
+```
+ignore-scripts=true
+```
+
 ### 2.5 Decisiones cerradas
 - Arquitectura hexagonal en todo servicio: aísla el dominio del framework y de la infraestructura.
 - Stack y versiones exactas de §1: Node 24 LTS; TypeScript 6.0.3 por compatibilidad de typescript-eslint (`<6.1.0`).
@@ -76,7 +228,12 @@ graph TD
 - Logs JSON (pino de Fastify) con redacción de datos sensibles.
 - Health `live` y `ready`.
 - Contraseñas de 12 a 128 caracteres; email normalizado y único.
-- Pruebas con Vitest y Testcontainers; el nombre de cada prueba incluye su ID `[AC-AUT-NN]`.
+- Pruebas con Vitest sobre la PostgreSQL 18.6 del servicio `postgres` de Compose; el nombre de cada prueba incluye su ID `[AC-AUT-NN]`.
+- Ambiente 100 % Docker (constitución): compilación, pruebas y ejecución en contenedores con el Compose propio del servicio (`services/auth/compose.dev.yaml`, §2.3).
+- `.npmrc` raíz con `ignore-scripts=true`: el `postinstall` de lefthook 2.1.12 reinstala hooks con `--force` y podría sobrescribir el hook versionado; el binario de lefthook funciona sin `postinstall`.
+- Hook de commit vía `.githooks/pre-commit` (activado con `git config core.hooksPath .githooks`) que ejecuta lefthook dentro del contenedor `dev`.
+- Los archivos de este spec no dependen de ningún Compose del portal completo.
+- YAML versionado con comillas simples (por `singleQuote: true` de `.prettierrc`) para que `prettier --check .` pase.
 - Monorepo con npm workspaces `apps/*` y `services/*`.
 - Saltos de línea LF en todo el repositorio.
 
@@ -84,7 +241,7 @@ graph TD
 
 | Riesgo | Impacto | Mitigación |
 |:---|:---|:---|
-| Versiones del stack no verificadas localmente | La instalación o el typecheck fallan al empezar | Primera instalación con `npm ci` y `tsc --noEmit` antes de escribir código de producto (tareas 1.2 y 1.3) |
+| Versiones del stack no verificadas localmente | La instalación o el typecheck fallan al empezar | Primera instalación con `npm ci` y `tsc --noEmit` en el contenedor `dev` antes de escribir código de producto (tarea 1.4) |
 | CRLF de Windows rompe scripts y Dockerfiles | Fallos de ejecución en contenedor y diffs ruidosos | `.gitattributes` con LF forzado (REQ-10.4) |
 | El límite por IP depende de la cabecera `x-real-ip` del proxy inverso; si el puerto del servicio se expone directamente, un cliente podría falsear la cabecera y evadir el límite | El rate limit de login/registro puede evadirse | El origen público del portal es el proxy inverso; el servicio usa `x-real-ip` si existe y, si no, la IP del socket |
 | La llave privada de firma vive sin cifrar en `auth_schema.signing_keys` | Compromiso de la DB permitiría forjar access tokens | Rol exclusivo `auth_svc`, esquema aislado; la llave privada nunca se registra ni se publica (el JWKS solo expone la parte pública) |
@@ -92,6 +249,12 @@ graph TD
 | El contador de rate limit está en memoria por proceso | Con varias instancias el límite se multiplica | Válido para una sola instancia; queda documentado |
 | El hash Argon2id es costoso en CPU | Abuso de login/registro podría saturar CPU | Límite por IP en login y registro |
 | Compatibilidad del build en Docker con workspaces | La imagen no compila o no arranca | Verificado por la tarea del Dockerfile (AC-AUT-25) |
+| git worktree: `.git` es un archivo con una ruta del host que `git` dentro del contenedor no resuelve | El hook de commit y `lefthook run` fallan | El hook se omite con aviso si `.git` no es un directorio; la validación de lefthook usa un repositorio temporal dentro del contenedor |
+| `lefthook validate` sale 0 sin validar si no hay repositorio git | Un `lefthook.yml` inválido pasaría sin detectarse | El criterio exige repositorio temporal y la salida `All good` |
+| El `postinstall` de lefthook 2.1.12 reinstala hooks con `--force` | Sobrescribe el hook versionado `.githooks/pre-commit` | `.npmrc` raíz con `ignore-scripts=true` |
+| Las pruebas `db` comparten una sola base de datos | Carreras entre archivos de prueba | `fileParallelism: false` en el proyecto `db`; el proyecto `unit` sigue en paralelo |
+| PostgreSQL efímero con credenciales de desarrollo por defecto en `compose.dev.yaml` | Exposición de credenciales | Son desechables y no son secretos del proyecto: la DB no publica puertos ni persiste datos; `down -v` reinicia el estado |
+| Bind mount en Docker Desktop (rendimiento) | Instalaciones y pruebas lentas | `node_modules` y la caché de npm en volúmenes con nombre |
 
 ### 2.7 Directrices del proyecto
 - `Global`: arquitectura hexagonal en todo servicio, con dominio sin dependencias de framework, DB, broker ni HTTP.
@@ -102,6 +265,8 @@ graph TD
 - `Global`: cada cambio de estado publica evento vía Transactional Outbox y los consumidores son idempotentes por `eventId`.
 - `Global`: logs JSON con `correlationId`, nunca secretos, tokens ni contraseñas.
 - `Global`: `.makia/`, `.claude/`, `.cursor/`, `.agents/` quedan fuera de ESLint, Prettier y Docker; el repositorio usa saltos de línea LF.
+- `Global`: `.npmrc` raíz con `ignore-scripts=true`: las instalaciones npm no ejecutan scripts de ciclo de vida.
+- `Unidad: services/auth`: todo comando de compilación, prueba y ejecución de la unidad corre en contenedores con `docker compose -f services/auth/compose.dev.yaml` (servicio `dev`); la DB de pruebas es el servicio `postgres` de ese Compose.
 - `Unidad: services/auth`: se crea el modelo de dominio de este BD en `../domain-model.md` (Contexto Delimitado de Identidad).
 
 ### 2.8 Sujeto a actualización futura
@@ -217,7 +382,7 @@ No hay valores centinela: los tres usuarios demo con ids fijos solo se crean en 
 
 ### 3.2 Database Schema & Persistence
 - **Target Database / Storage:** PostgreSQL 18.6, esquema `auth_schema` (rol `auth_svc`), declarado en `db-design.dbml`.
-- **Esquema y rol:** el servicio NO los crea (los provee el entorno; el rol no tiene permiso `CREATE` en la DB). El runner de migraciones se ejecuta con `createSchema: false`. En pruebas, `tests/global-setup.ts` ejecuta `CREATE SCHEMA IF NOT EXISTS auth_schema` antes de migrar.
+- **Esquema y rol:** el servicio NO los crea (los provee el entorno; el rol no tiene permiso `CREATE` en la DB). El runner de migraciones se ejecuta con `createSchema: false`. En desarrollo y pruebas, el esquema y el rol los crea el script de inicialización del servicio `postgres` de Compose (`01-auth-role-schema.sh`, §2.3); `tests/global-setup.ts` solo migra.
 - **Consultas:** todas usan nombres calificados `auth_schema.<tabla>` y parámetros posicionales (`$1`, `$2`, ...); nunca se concatenan valores en SQL.
 - **Migración única:** `services/auth/migrations/1792022400000_create-auth-tables.sql`, formato node-pg-migrate SQL con marcadores `-- Up Migration` y `-- Down Migration`:
 
@@ -558,7 +723,7 @@ Los eventos `auth.*` los registran los handlers HTTP con `request.log.info({even
 | Variable | Obligatoria | Default | Regla |
 |:---|:---|:---|:---|
 | `PORT` | No | `3001` | entero 1–65535 |
-| `DATABASE_URL` | Sí | — | la compone el entorno con el rol `auth_svc` |
+| `DATABASE_URL` | Sí | — | la compone el entorno con el rol `auth_svc`; en Compose es `postgres://auth_svc:<contraseña>@postgres:5432/fluxone` |
 | `JWT_ISSUER` | No | `urn:fluxone:auth` | no vacío |
 | `JWT_AUDIENCE` | No | `urn:fluxone:api` | no vacío |
 | `COOKIE_SECRET` | Sí | — | ≥ 32 caracteres |
@@ -601,7 +766,8 @@ Rutas relativas a la raíz del repositorio. Todos los archivos son "Crear", salv
 **Estructura de `services/auth/`:**
 ```
 services/auth/
-├── package.json, tsconfig.json, tsconfig.build.json, vitest.config.ts, openapi.yaml, Dockerfile
+├── package.json, tsconfig.json, tsconfig.build.json, vitest.config.ts, openapi.yaml, Dockerfile, compose.dev.yaml
+├── docker/postgres-init/01-auth-role-schema.sh
 ├── migrations/1792022400000_create-auth-tables.sql
 ├── src/
 │   ├── config.ts, compose.ts, main.ts
@@ -615,33 +781,39 @@ services/auth/
 
 | Archivo | Acción | Propósito | Tarea |
 |:---|:---|:---|:---|
-| `lefthook.yml` | Crear | Hooks pre-commit (ESLint, Prettier, typecheck) | 1.1 |
-| `package.json` | Crear | Raíz del monorepo: workspaces, scripts y devDependencies exactas | 1.2 |
-| `tsconfig.base.json` | Crear | Opciones base de TypeScript | 1.2 |
-| `eslint.config.js` | Crear | Flat config de ESLint (sin plugins de React) | 1.2 |
-| `.prettierrc` | Crear | Reglas de Prettier | 1.2 |
-| `.prettierignore` | Crear | Exclusiones de Prettier | 1.2 |
-| `.gitattributes` | Crear | Saltos de línea LF (CRLF solo `.cmd`, `.bat`, `.ps1`) | 1.2 |
-| `.gitignore` | Modificar | Añadir bloque `# Proyecto` al final | 1.2 |
-| `.dockerignore` | Crear | Exclusiones del contexto Docker | 1.2 |
-| `package-lock.json` | Crear | Lockfile generado por `npm install` | 1.3 |
-| `services/auth/package.json` | Crear | Workspace `@fluxone/auth`: dependencias y scripts | 1.3 |
-| `services/auth/tsconfig.json` | Crear | TypeScript del servicio (typecheck, sin emitir) | 1.3 |
-| `services/auth/tsconfig.build.json` | Crear | Compilación a `dist` | 1.3 |
-| `services/auth/vitest.config.ts` | Crear | Proyectos Vitest `unit` y `db` | 1.3 |
-| `services/auth/migrations/1792022400000_create-auth-tables.sql` | Crear | Migración única de `auth_schema` | 1.4 |
-| `services/auth/tests/global-setup.ts` | Crear | Contenedor PostgreSQL de pruebas, esquema y migraciones | 1.4 |
-| `services/auth/tests/support/db.ts` | Crear | Helpers de `Pool` y `truncateAll()` | 1.4 |
-| `services/auth/tests/integration/migrations.test.ts` | Crear | Verifica la migración | 1.4 |
-| `services/auth/src/domain/errors.ts` | Crear | Errores tipados | 1.5 |
-| `services/auth/src/domain/email.ts` | Crear | `parseEmail` | 1.5 |
-| `services/auth/src/domain/password-policy.ts` | Crear | `assertValidPassword` | 1.5 |
-| `services/auth/src/domain/user.ts` | Crear | Entidad `User` | 1.5 |
-| `services/auth/src/domain/refresh-token.ts` | Crear | Entidad `RefreshToken`, TTLs y `decideRotation` | 1.5 |
-| `services/auth/src/domain/signing-key.ts` | Crear | `SigningKey` y `PublicJwk` | 1.5 |
-| `services/auth/tests/unit/domain/email.test.ts` | Crear | Pruebas de `parseEmail` | 1.5 |
-| `services/auth/tests/unit/domain/password-policy.test.ts` | Crear | Pruebas de la política de contraseña | 1.5 |
-| `services/auth/tests/unit/domain/refresh-token.test.ts` | Crear | Pruebas de `decideRotation` | 1.5 |
+| `services/auth/compose.dev.yaml` | Crear | Compose de desarrollo y pruebas del servicio: `postgres` y `dev` | 1.1 |
+| `services/auth/docker/postgres-init/01-auth-role-schema.sh` | Crear | Crea el rol `auth_svc` y el esquema `auth_schema` en la PostgreSQL de Compose | 1.1 |
+| `services/auth/Dockerfile` | Crear | Etapa `dev` (Node + `git`) | 1.1 |
+| `.gitattributes` | Crear | Saltos de línea LF (CRLF solo `.cmd`, `.bat`, `.ps1`) | 1.1 |
+| `.dockerignore` | Crear | Exclusiones del contexto Docker | 1.1 |
+| `lefthook.yml` | Crear | Hooks pre-commit (ESLint, Prettier, typecheck) | 1.2 |
+| `.githooks/pre-commit` | Crear | Hook de git del host que ejecuta lefthook en el contenedor `dev` | 1.2 |
+| `package.json` | Crear | Raíz del monorepo: workspaces, scripts y devDependencies exactas | 1.3 |
+| `tsconfig.base.json` | Crear | Opciones base de TypeScript | 1.3 |
+| `eslint.config.js` | Crear | Flat config de ESLint (sin plugins de React) | 1.3 |
+| `.prettierrc` | Crear | Reglas de Prettier | 1.3 |
+| `.prettierignore` | Crear | Exclusiones de Prettier | 1.3 |
+| `.npmrc` | Crear | `ignore-scripts=true` | 1.3 |
+| `.gitignore` | Modificar | Añadir bloque `# Proyecto` al final | 1.3 |
+| `package-lock.json` | Crear | Lockfile generado por `npm install` en el contenedor `dev` | 1.4 |
+| `services/auth/package.json` | Crear | Workspace `@fluxone/auth`: dependencias y scripts | 1.4 |
+| `services/auth/tsconfig.json` | Crear | TypeScript del servicio (typecheck, sin emitir) | 1.4 |
+| `services/auth/tsconfig.build.json` | Crear | Compilación a `dist` | 1.4 |
+| `services/auth/vitest.config.ts` | Crear | Proyectos Vitest `unit` y `db` | 1.4 |
+| `services/auth/migrations/1792022400000_create-auth-tables.sql` | Crear | Migración única de `auth_schema` | 1.5 |
+| `services/auth/tests/global-setup.ts` | Crear | Migraciones sobre la PostgreSQL de Compose | 1.5 |
+| `services/auth/tests/support/db.ts` | Crear | Helpers de `Pool` y `truncateAll()` | 1.5 |
+| `services/auth/tests/integration/migrations.test.ts` | Crear | Verifica la migración | 1.5 |
+| `services/auth/tests/integration/environment.test.ts` | Crear | Verifica el entorno de pruebas (versión de PostgreSQL, rol, host) | 1.5 |
+| `services/auth/src/domain/errors.ts` | Crear | Errores tipados | 1.6 |
+| `services/auth/src/domain/email.ts` | Crear | `parseEmail` | 1.6 |
+| `services/auth/src/domain/password-policy.ts` | Crear | `assertValidPassword` | 1.6 |
+| `services/auth/src/domain/user.ts` | Crear | Entidad `User` | 1.6 |
+| `services/auth/src/domain/refresh-token.ts` | Crear | Entidad `RefreshToken`, TTLs y `decideRotation` | 1.6 |
+| `services/auth/src/domain/signing-key.ts` | Crear | `SigningKey` y `PublicJwk` | 1.6 |
+| `services/auth/tests/unit/domain/email.test.ts` | Crear | Pruebas de `parseEmail` | 1.6 |
+| `services/auth/tests/unit/domain/password-policy.test.ts` | Crear | Pruebas de la política de contraseña | 1.6 |
+| `services/auth/tests/unit/domain/refresh-token.test.ts` | Crear | Pruebas de `decideRotation` | 1.6 |
 | `services/auth/src/application/ports/clock.ts` | Crear | Puerto `Clock` | 2.1 |
 | `services/auth/src/application/ports/password-hasher.ts` | Crear | Puerto `PasswordHasher` | 2.1 |
 | `services/auth/src/application/ports/opaque-token-generator.ts` | Crear | Puerto `OpaqueTokenGenerator` | 2.1 |
@@ -706,57 +878,68 @@ services/auth/
 | `services/auth/tests/acceptance/operability.test.ts` | Crear | Aceptación de health, errores y logs (sin archivos de producción nuevos; solo ajustes si hay fallos) | 3.4 |
 | `services/auth/openapi.yaml` | Crear | Contrato OpenAPI 3.1 | 4.1 |
 | `services/auth/tests/acceptance/openapi.test.ts` | Crear | Verifica `openapi.yaml` | 4.1 |
-| `services/auth/Dockerfile` | Crear | Imagen del servicio | 4.2 |
+| `services/auth/Dockerfile` | Modificar | Añadir las etapas `build` y runtime (imagen del servicio) | 4.2 |
+| `services/auth/compose.dev.yaml` | Modificar | Añadir el servicio `auth` | 4.2 |
 
 La tarea 4.3 no crea archivos (verificación global).
 
-### Contenido exacto de `lefthook.yml` (tarea 1.1)
+### Contenido exacto de `.gitattributes` y `.dockerignore` (tarea 1.1)
+- **`.gitattributes`:** `* text=auto eol=lf`, `*.sh text eol=lf`, `Dockerfile* text eol=lf`, `*.cmd text eol=crlf`, `*.bat text eol=crlf`, `*.ps1 text eol=crlf`.
+- **`.dockerignore`:** `node_modules`, `**/node_modules`, `dist`, `**/dist`, `coverage`, `.git`, `.makia`, `.claude`, `.cursor`, `.agents`, `.env`, `*.log` (una por línea).
+
+El contenido exacto de `services/auth/compose.dev.yaml`, `services/auth/docker/postgres-init/01-auth-role-schema.sh` y la etapa `dev` del `Dockerfile` (tarea 1.1) está en §2.3.
+
+### Contenido exacto de `lefthook.yml` (tarea 1.2)
+Los comandos corren dentro del contenedor `dev` (lo invoca `.githooks/pre-commit`, §2.3). Globs con comillas simples (`singleQuote: true` de `.prettierrc`) para que `prettier --check .` pase.
 ```yaml
 pre-commit:
   parallel: true
   commands:
     eslint:
-      glob: "*.{ts,tsx,js,mjs}"
+      glob: '*.{ts,tsx,js,mjs}'
       run: npx eslint --max-warnings 0 --fix {staged_files}
       stage_fixed: true
     prettier:
-      glob: "*.{ts,tsx,js,mjs,json,yml,yaml,md,css}"
+      glob: '*.{ts,tsx,js,mjs,json,yml,yaml,md,css}'
       run: npx prettier --write {staged_files}
       stage_fixed: true
     typecheck:
-      glob: "*.{ts,tsx}"
+      glob: '*.{ts,tsx}'
       run: npm run typecheck --workspaces --if-present
 ```
 
-### Configuración de raíz (tarea 1.2)
+El contenido exacto de `.githooks/pre-commit` (tarea 1.2) está en §2.3.
+
+### Configuración de raíz (tarea 1.3)
 - **`package.json`:** `name: "fluxone-payment"`, `private: true`, `type: "module"`, `engines: {"node": "24.22.0"}`, `workspaces: ["apps/*", "services/*"]`; scripts `lint` = `eslint . --max-warnings 0`, `format` = `prettier --write .`, `format:check` = `prettier --check .`; devDependencies con las versiones exactas de §1 (raíz): `eslint`, `@eslint/js`, `typescript-eslint`, `eslint-config-prettier`, `globals`, `prettier`, `lefthook`, `@types/node`, `typescript`.
 - **`tsconfig.base.json`:** `compilerOptions`: `target: "ES2024"`, `module: "NodeNext"`, `moduleResolution: "NodeNext"`, `strict: true`, `verbatimModuleSyntax: true`, `skipLibCheck: true`, `types: ["node"]`.
 - **`eslint.config.js`:** flat config con `defineConfig` de `eslint/config`; `ignores`: `**/dist/**`, `**/node_modules/**`, `**/coverage/**`, `.makia/**`, `.claude/**`, `.cursor/**`, `.agents/**`; luego `js.configs.recommended`, `...tseslint.configs.recommended`, `{languageOptions: {globals: globals.node}}` y `prettierConfig` (`eslint-config-prettier`) al final. NO incluye plugins de React: este spec no tiene código React.
 - **`.prettierrc`:** `{ "semi": true, "singleQuote": true, "trailingComma": "all", "printWidth": 100, "endOfLine": "lf" }`.
 - **`.prettierignore`:** `node_modules`, `dist`, `coverage`, `package-lock.json`, `.makia`, `.claude`, `.cursor`, `.agents`, `CLAUDE.md`, `AGENTS.md` (una entrada por línea).
-- **`.gitattributes`:** `* text=auto eol=lf`, `*.sh text eol=lf`, `Dockerfile* text eol=lf`, `*.cmd text eol=crlf`, `*.bat text eol=crlf`, `*.ps1 text eol=crlf`.
+- **`.npmrc`:** una línea `ignore-scripts=true` (contenido exacto en §2.3).
 - **`.gitignore` (Modificar):** añadir al final un bloque que empieza con la línea `# Proyecto` seguido de `node_modules/`, `dist/`, `coverage/`, `.env`, `*.log`, una por línea; no tocar las líneas existentes.
-- **`.dockerignore`:** `node_modules`, `**/node_modules`, `dist`, `**/dist`, `coverage`, `.git`, `.makia`, `.claude`, `.cursor`, `.agents`, `.env`, `*.log` (una por línea).
 
-### Configuración del workspace (tarea 1.3)
-- **`services/auth/package.json`:** `name: "@fluxone/auth"`, `private: true`, `type: "module"`; `dependencies`: `fastify`, `pg`, `node-pg-migrate`, `jose`, `@node-rs/argon2`, `@fastify/rate-limit`, `@fastify/cookie`; `devDependencies`: `vitest`, `testcontainers`, `@testcontainers/postgresql`, `tsx`, `@types/pg`; versiones exactas de §1. Scripts: `build` = `tsc -p tsconfig.build.json`, `dev` = `tsx watch src/main.ts`, `start` = `node dist/main.js`, `typecheck` = `tsc --noEmit -p tsconfig.json`, `test` = `vitest run`.
+### Configuración del workspace (tarea 1.4)
+- **`services/auth/package.json`:** `name: "@fluxone/auth"`, `private: true`, `type: "module"`; `dependencies`: `fastify`, `pg`, `node-pg-migrate`, `jose`, `@node-rs/argon2`, `@fastify/rate-limit`, `@fastify/cookie`; `devDependencies`: `vitest`, `tsx`, `@types/pg`; versiones exactas de §1. Scripts: `build` = `tsc -p tsconfig.build.json`, `dev` = `tsx watch src/main.ts`, `start` = `node dist/main.js`, `typecheck` = `tsc --noEmit -p tsconfig.json`, `test` = `vitest run`.
 - **`services/auth/tsconfig.json`:** `extends: "../../tsconfig.base.json"`, `compilerOptions.noEmit: true`, `include: ["src", "tests", "vitest.config.ts"]`.
 - **`services/auth/tsconfig.build.json`:** `extends: "./tsconfig.json"`, `compilerOptions: {noEmit: false, rootDir: "src", outDir: "dist"}`, `include: ["src"]`, `exclude: ["tests"]`.
-- **`services/auth/vitest.config.ts`:** usa `test.projects` con dos proyectos: `unit` (`include: ['tests/unit/**/*.test.ts']`, sin Docker) y `db` (`include: ['tests/integration/**/*.test.ts', 'tests/acceptance/**/*.test.ts']`, `globalSetup: ['./tests/global-setup.ts']`, `testTimeout: 60000`, `hookTimeout: 120000`); `environment: 'node'` y sin `globals` (las pruebas importan de `vitest`).
+- **`services/auth/vitest.config.ts`:** usa `test.projects` con dos proyectos: `unit` (`include: ['tests/unit/**/*.test.ts']`, sin DB) y `db` (`include: ['tests/integration/**/*.test.ts', 'tests/acceptance/**/*.test.ts']`, `globalSetup: ['./tests/global-setup.ts']` declarado dentro del proyecto `db`, `testTimeout: 60000`, `hookTimeout: 120000`, `fileParallelism: false` dentro de `test` del proyecto `db` porque sus archivos comparten una DB; el proyecto `unit` sigue en paralelo); `environment: 'node'` y sin `globals` (las pruebas importan de `vitest`).
 
-### Soporte de pruebas (tarea 1.4)
-- **`tests/global-setup.ts`:** inicia un contenedor `postgres:18.6-alpine` con `@testcontainers/postgresql`; ejecuta `CREATE SCHEMA IF NOT EXISTS auth_schema`; ejecuta las migraciones con `runner` (mismos parámetros que producción, apuntando a `services/auth/migrations`); expone la URL como `process.env.DATABASE_URL`; devuelve la función de teardown que detiene el contenedor.
+### Soporte de pruebas (tarea 1.5)
+- **`tests/global-setup.ts`:** lee `DATABASE_URL` del entorno (si falta, lanza un error con el mensaje `DATABASE_URL no definida: ejecuta las pruebas con docker compose run dev`); ejecuta las migraciones con `runner` (mismos parámetros que producción, apuntando a `services/auth/migrations`). No inicia contenedores ni crea esquema (lo hace el servicio `postgres` de Compose, §3.2); no hay teardown de contenedor.
 - **`tests/support/db.ts`:** `createTestPool(): Pool` (usa `process.env.DATABASE_URL`) y `truncateAll(pool): Promise<void>` que ejecuta `TRUNCATE auth_schema.refresh_tokens, auth_schema.users, auth_schema.signing_keys CASCADE`.
+- **`tests/integration/environment.test.ts`:** con `createTestPool()` afirma `[AC-AUT-32]`: la versión del servidor (`SHOW server_version`) empieza por `18.6`; `SELECT current_user` devuelve `auth_svc`; `CREATE SCHEMA` falla con código `42501` (el rol no tiene `CREATE` en la DB); y `new URL(process.env.DATABASE_URL)` tiene `hostname` `postgres` y `port` `5432`.
 
 ### Dockerfile (tarea 4.2; descripción)
-- Etapa `build`: `FROM node:24.22.0-alpine AS build`; `WORKDIR /app`; `COPY . .` (el contexto es la raíz del repositorio, filtrado por `.dockerignore`, de modo que están todos los `package.json` de los workspaces); `RUN npm ci --workspace=services/auth --include-workspace-root`; `RUN npm run build -w services/auth`; `RUN rm -rf node_modules && npm ci --omit=dev --workspace=services/auth --include-workspace-root=false`.
-- Etapa runtime: `FROM node:24.22.0-alpine`; `ENV NODE_ENV=production`; `WORKDIR /app`; copia desde `build`: `node_modules`, `package.json`, `services/auth/package.json`, `services/auth/dist`, `services/auth/migrations`; `USER node`; `EXPOSE 3001`; `CMD ["node","services/auth/dist/main.js"]`.
+La etapa `dev` ya existe (tarea 1.1, contenido en §2.3) y es la primera del archivo; la tarea 4.2 añade, después de ella, las etapas `build` y runtime, de modo que `docker compose -f services/auth/compose.dev.yaml build auth` (servicio `auth` sin `target`) produce la imagen runtime.
+- Etapa `build`: `FROM node:24.22.0-alpine AS build`; `WORKDIR /app`; `COPY . .` (el contexto es la raíz del repositorio, filtrado por `.dockerignore`, de modo que están todos los `package.json` de los workspaces; el `.npmrc` copiado aplica `ignore-scripts`); `RUN npm ci --workspace=services/auth --include-workspace-root`; `RUN npm run build -w services/auth`; `RUN rm -rf node_modules && npm ci --omit=dev --workspace=services/auth --include-workspace-root=false`.
+- Etapa runtime (final): `FROM node:24.22.0-alpine`; `ENV NODE_ENV=production`; `WORKDIR /app`; copia desde `build`: `node_modules`, `package.json`, `services/auth/package.json`, `services/auth/dist`, `services/auth/migrations`; `USER node`; `EXPOSE 3001`; `CMD ["node","services/auth/dist/main.js"]`.
 - Contingencia: si aparece el bug de npm "Exit handler never called" en Alpine, usar `node:24.22.0-bookworm-slim` en ambas etapas.
 
 ### Validación de palabras reservadas (TypeScript/JavaScript)
 Segmentos de ruta revisados: `services`, `auth`, `migrations`, `src`, `domain`, `application`, `ports`, `use-cases`, `adapters`, `inbound`, `outbound`, `http`, `routes`, `postgres`, `crypto`, `tests`, `unit`, `integration`, `acceptance`, `support`. Ninguno colisiona con palabras reservadas de TypeScript/JavaScript. Se usa `inbound`/`outbound` en lugar de `in` porque `in` es palabra reservada.
 
-Todos los archivos son nuevos salvo `.gitignore`, `app.ts` y `auth-routes.ts` (modificados por tareas posteriores): no hay directivas de supresión (`eslint-disable`, `@ts-ignore`) preexistentes que revisar.
+Todos los archivos son nuevos salvo `.gitignore`, `app.ts`, `auth-routes.ts`, `Dockerfile` y `compose.dev.yaml` (modificados por tareas posteriores): no hay directivas de supresión (`eslint-disable`, `@ts-ignore`) preexistentes que revisar.
 
 ### 5.1 Barrido de términos críticos
 sin términos críticos afectados
@@ -787,11 +970,13 @@ Convención de rutas: las que empiezan por `src/`, `migrations/` o `tests/` son 
 | REQ-8.1 | §4.2 Health, §4.3 | `src/adapters/inbound/http/routes/health-routes.ts`, `src/compose.ts` |
 | REQ-8.2 | §4.2 Errores, §7.1 | `src/adapters/inbound/http/error-handler.ts`, `src/domain/errors.ts` |
 | REQ-8.3 | §4.2 Logging y Fastify, §7.2 | `src/adapters/inbound/http/app.ts`, `src/adapters/inbound/http/routes/auth-routes.ts` |
-| REQ-8.4 | §5 Dockerfile | `services/auth/Dockerfile`, `.dockerignore` |
+| REQ-8.4 | §2.3, §5 Dockerfile | `services/auth/Dockerfile`, `services/auth/compose.dev.yaml`, `.dockerignore` |
 | REQ-9.1 | §4.2 | `services/auth/openapi.yaml` |
-| REQ-10.1, REQ-10.2 | §1, §5 Configuración de raíz y del workspace | `package.json`, `services/auth/package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore` |
-| REQ-10.3 | §5 `lefthook.yml` | `lefthook.yml` |
-| REQ-10.4 | §5 Configuración de raíz | `.gitattributes` |
+| REQ-10.1, REQ-10.2 | §1, §5 Configuración de raíz y del workspace | `package.json`, `services/auth/package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc` |
+| REQ-10.3 | §2.3, §5 `lefthook.yml` | `lefthook.yml`, `.githooks/pre-commit` |
+| REQ-10.4 | §5 `.gitattributes` y `.dockerignore` | `.gitattributes` |
+| REQ-11.1 | §2.3, §5 | `services/auth/compose.dev.yaml`, `services/auth/Dockerfile` |
+| REQ-11.2 | §2.3, §3.2, §8.2 | `services/auth/docker/postgres-init/01-auth-role-schema.sh`, `tests/integration/environment.test.ts`, `tests/global-setup.ts` |
 
 ---
 
@@ -827,6 +1012,8 @@ Convención de rutas: las que empiezan por `src/`, `migrations/` o `tests/` son 
 - **Inyección:** consultas parametrizadas; esquemas JSON de entrada con `additionalProperties: false` y esquemas de respuesta que impiden serializar campos no declarados.
 - **Logs:** redacción de `authorization`, `cookie` y `set-cookie`; sin contraseñas ni tokens. PII solo email; en login fallido solo su hash SHA-256.
 - **Aislamiento de datos:** el servicio usa únicamente `auth_schema` con el rol `auth_svc`, sin FK entre esquemas; el rol no tiene `CREATE` en la DB.
+- **PostgreSQL de desarrollo:** el servicio `postgres` de Compose no publica puertos, no persiste datos (`tmpfs`) y el rol `auth_svc` no tiene `CREATE` en la DB (verificado por AC-AUT-32). Las credenciales por defecto de `compose.dev.yaml` son desechables y no son secretos del proyecto.
+- **Cadena de suministro:** `.npmrc` con `ignore-scripts=true` evita que las instalaciones npm ejecuten scripts de ciclo de vida de las dependencias.
 - **Idempotencia por operación:**
 
 | Operación | Mecanismo |
@@ -847,18 +1034,19 @@ Convención de rutas: las que empiezan por `src/`, `migrations/` o `tests/` son 
 Convención: el nombre de cada prueba incluye su ID, p. ej. `it('[AC-AUT-02] registra ...')`; imports explícitos de `vitest` (sin globals).
 
 ### 8.1 Unit Tests
-Proyecto `unit`, sin I/O ni Docker. Comando: `npm run test -w services/auth -- --project unit`.
+Proyecto `unit`, sin I/O ni DB (corre en paralelo). Comando: `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run test -w services/auth -- --project unit`.
 - **Dominio:** `email` (normalización, longitud 254, patrón), `password-policy` (límites 12/128 válidos y 11/129 inválidos, conteo por code points), `decideRotation` (`REUSED` tiene prioridad sobre `EXPIRED`; `expiresAt == now` → `EXPIRED`).
 - **Casos de uso:** con fakes en memoria de los puertos (`tests/support/fakes.ts`).
 - **Adaptadores crypto:** hash Argon2id con prefijo `$argon2id$v=19$m=19456,t=2,p=1$`; token EdDSA firmado y verificado; token expirado, `iss`, `aud` y `alg` incorrectos rechazados; generador de llave; token opaco de 256 bits y hash SHA-256 hex de 64 caracteres.
 
 ### 8.2 Integration Tests
-Proyecto `db`, PostgreSQL 18.6 real por Testcontainers desde `tests/global-setup.ts`, con el mismo SQL de migración que producción.
+Proyecto `db`, sobre la PostgreSQL 18.6 del servicio `postgres` de Compose (`tests/global-setup.ts` migra con el mismo SQL que producción); los archivos corren en secuencia (`fileParallelism: false`). Comando: `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db`.
+- `environment.test.ts` (AC-AUT-32): versión del servidor `18.6`, `current_user` = `auth_svc`, `CREATE SCHEMA` falla con `42501`, `DATABASE_URL` con host `postgres` y puerto `5432`.
 - `migrations.test.ts`: tablas, `users_email_lower_chk`, `signing_keys_one_active`, FKs, `token_hash` único.
 - Repositorios: `insertIfAbsent`; `23505` → `EmailAlreadyRegisteredError`; `rotate` (incluido `REUSED` que revoca la familia y la rotación concurrente con `Promise.all` sobre el mismo token: exactamente un `ROTATED` y un `REUSED`); `revokeFamilyByTokenHash`; `insertIfNoActive` concurrente deja una sola llave activa.
 
 ### 8.3 Contract / E2E Tests
-Proyecto `db`; `tests/acceptance/*.test.ts`; `composeApp` real + Fastify `inject`; limpieza con `truncateAll()` entre pruebas; variables de entorno de prueba para `COOKIE_SECRET`, `DEMO_USERS_PASSWORD`, etc.; para IPs distintas se usa `remoteAddress` o la cabecera `x-real-ip`.
+Proyecto `db` (PostgreSQL 18.6 de Compose, sin Testcontainers, archivos en secuencia; mismo comando que §8.2); `tests/acceptance/*.test.ts`; `composeApp` real + Fastify `inject`; limpieza con `truncateAll()` entre pruebas; variables de entorno de prueba para `COOKIE_SECRET`, `DEMO_USERS_PASSWORD`, etc.; para IPs distintas se usa `remoteAddress` o la cabecera `x-real-ip`.
 
 | Archivo | Criterios |
 |:---|:---|
@@ -871,8 +1059,13 @@ Proyecto `db`; `tests/acceptance/*.test.ts`; `composeApp` real + Fastify `inject
 | `seed.test.ts` | AC-AUT-21 (incluye inicio de sesión de los tres usuarios demo con `DEMO_USERS_PASSWORD`) |
 | `operability.test.ts` | AC-AUT-22..24 (captura logs con `logStream`) |
 | `openapi.test.ts` | AC-AUT-26 (lee `openapi.yaml` y comprueba con expresiones regulares `openapi: 3.1` y cada ruta y método de §4.2) |
+| `integration/environment.test.ts` | AC-AUT-32 (ver §8.2) |
 
-AC-AUT-25 y AC-AUT-27..30 se verifican con comandos (ver la tabla de trazabilidad de `requirements.md`). Comandos del proyecto: `npm run test --workspaces --if-present`, `npm run lint`, `npm run typecheck --workspaces --if-present`, `npm run format:check`.
+AC-AUT-25 y AC-AUT-27..31 se verifican con comandos (ver la tabla de trazabilidad de `requirements.md`). Comandos del proyecto:
+- `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test --workspaces --if-present`
+- `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run lint`
+- `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run typecheck --workspaces --if-present`
+- `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run format:check`
 
 ---
 

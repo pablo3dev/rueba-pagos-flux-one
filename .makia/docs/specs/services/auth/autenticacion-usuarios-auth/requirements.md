@@ -6,13 +6,13 @@
 - **Feature:** `autenticacion-usuarios` — **Unidad de código:** `services/auth`
 
 ## Resumen
-Servicio de identidad del portal de pagos: permite a un visitante registrarse, iniciar sesión, mantener su sesión renovándola de forma segura, cerrar sesión y consultar su perfil. Emite credenciales de corta vida que otros servicios verifican de forma autónoma con llaves públicas publicadas. Incluye tres usuarios demo, la base verificable del repositorio (calidad de código y formato automáticos), el contrato HTTP documentado y el empaquetado en contenedor.
+Servicio de identidad del portal de pagos: permite a un visitante registrarse, iniciar sesión, mantener su sesión renovándola de forma segura, cerrar sesión y consultar su perfil. Emite credenciales de corta vida que otros servicios verifican de forma autónoma con llaves públicas publicadas. Incluye tres usuarios demo, la base verificable del repositorio (calidad de código y formato automáticos), el contrato HTTP documentado, el empaquetado en contenedor y un entorno de desarrollo 100 % Docker (compilar, probar y ejecutar el servicio sin instalar nada en la máquina del desarrollador salvo Docker y Git).
 
 ## Problema
 Para operar un portal de pagos cada cliente debe identificarse de forma segura: sin una identidad confiable cualquiera podría mover dinero ajeno o suplantar a otro cliente. Los demás servicios del portal necesitan confiar en quién hace cada solicitud sin guardar contraseñas ni sesiones propias. Además, el equipo necesita una base de repositorio verificable (calidad de código y formato automáticos) desde el primer servicio.
 
 ## Solución
-- **En qué consiste:** Un servicio de identidad que permite registrarse, iniciar sesión, renovar la sesión, cerrar sesión y consultar el perfil propio; emite credenciales de acceso de corta vida verificables por otros servicios mediante llaves públicas publicadas; ofrece tres usuarios demo ya existentes para pruebas; e incluye la base del repositorio (herramientas de calidad y verificación previa a cada commit), su contrato HTTP documentado y su empaquetado en contenedor.
+- **En qué consiste:** Un servicio de identidad que permite registrarse, iniciar sesión, renovar la sesión, cerrar sesión y consultar el perfil propio; emite credenciales de acceso de corta vida verificables por otros servicios mediante llaves públicas publicadas; ofrece tres usuarios demo ya existentes para pruebas; e incluye la base del repositorio (herramientas de calidad y verificación previa a cada commit), su contrato HTTP documentado, su empaquetado en contenedor y un entorno de desarrollo en contenedores (Compose propio con Node 24.22.0 y PostgreSQL 18.6) donde se ejecuta todo comando de compilación, calidad y pruebas.
 - **Cómo resuelve el problema:** La identidad es única por email; las contraseñas nunca son recuperables; las sesiones son revocables; la reutilización de una credencial de sesión robada se detecta y revoca la sesión completa; los servicios consumidores verifican credenciales sin guardar contraseñas ni sesiones; y el repositorio rechaza código que no cumple los estándares de calidad.
 
 ## Objetivos y criterios de éxito
@@ -20,14 +20,15 @@ Para operar un portal de pagos cada cliente debe identificarse de forma segura: 
 - **Objetivo 2:** Una credencial de sesión robada y reutilizada se detecta y se revoca toda la sesión.
 - **Objetivo 3:** Ningún secreto (contraseña, token, cookie) aparece en respuestas de error ni en registros.
 - **Objetivo 4:** Otros servicios verifican las credenciales de acceso sin consultar a este servicio por cada solicitud.
-- **Objetivo 5:** El repositorio rechaza código que no pasa lint, formato o tipos antes de cada commit.
+- **Objetivo 5:** El repositorio rechaza código que no pasa lint, formato o tipos antes de cada commit (con el hook activado, ejecutado en contenedor).
+- **Objetivo 6:** Se puede compilar, probar y ejecutar el servicio con solo Docker, con su PostgreSQL 18.6 en la red de Compose.
 
 ---
 
 ## Actores de negocio y flujo de valor
 - **Visitante / Cliente:** Se registra, inicia y cierra sesión y consulta su perfil; obtiene acceso seguro al portal sin que nadie pueda suplantarlo.
 - **Servicios consumidores del portal:** Verifican las credenciales de acceso usando las llaves públicas publicadas; confían en la identidad de cada solicitud sin guardar contraseñas ni sesiones.
-- **Desarrollador / evaluador:** Instala dependencias, ejecuta las verificaciones de calidad, construye la imagen del servicio y prueba el portal con los usuarios demo.
+- **Desarrollador / evaluador:** Trabaja solo con Docker (sin Node ni herramientas en su máquina): instala dependencias, ejecuta las verificaciones de calidad y las pruebas dentro de contenedores, construye y levanta la imagen del servicio y prueba el portal con los usuarios demo.
 
 ---
 
@@ -45,8 +46,9 @@ Para operar un portal de pagos cada cliente debe identificarse de forma segura: 
   - Registros de eventos de autenticación sin secretos.
   - Límites de intentos por IP en inicio de sesión y registro.
   - Contrato HTTP documentado (OpenAPI 3.1 en `services/auth/openapi.yaml`).
-  - Imagen de contenedor del servicio.
-  - Base del monorepo: npm workspaces, TypeScript estricto, ESLint, Prettier, saltos de línea LF y verificación previa a cada commit con lefthook.
+  - Imagen de contenedor del servicio y su ejecución en Compose junto a PostgreSQL 18.6.
+  - Base del monorepo: npm workspaces, TypeScript estricto, ESLint, Prettier, saltos de línea LF y verificación previa a cada commit con lefthook (ejecutados dentro del contenedor Node).
+  - Entorno de desarrollo en contenedores (Compose propio de `services/auth`: Node 24.22.0 y PostgreSQL 18.6; sin Node ni herramientas en el host).
 - **Fuera del Alcance (Out of Scope / Non-Goals):**
   - Recuperación de contraseña.
   - Verificación de email.
@@ -57,6 +59,8 @@ Para operar un portal de pagos cada cliente debe identificarse de forma segura: 
   - Listado o gestión de sesiones activas.
   - Depuración o expiración automática de tokens de sesión ya vencidos.
   - Límite de intentos en endpoints distintos de inicio de sesión y registro.
+  - Orquestación del portal completo con todos los servicios.
+  - Pruebas que lanzan contenedores desde el código de prueba (Testcontainers).
 
 ---
 
@@ -208,8 +212,8 @@ Para operar un portal de pagos cada cliente debe identificarse de forma segura: 
 - **REQ-8.3 (Ubicuo) — AC-AUT-24:**
   - `EL SISTEMA DEBE` registrar en logs JSON, con el identificador de la solicitud, los eventos `auth.login_succeeded` (con id de usuario), `auth.login_failed` (con huella SHA-256 del email normalizado, nunca el email ni la contraseña) y `auth.refresh_reuse_detected`, y nunca registrar contraseñas, tokens, cookies ni la cabecera `Authorization`.
 - **REQ-8.4 (Evento) — AC-AUT-25:**
-  - `CUANDO` un desarrollador construye la imagen de contenedor del servicio
-  - `EL SISTEMA DEBE` producir una imagen que contiene el servicio compilado y sus migraciones y que ejecuta como usuario no administrador.
+  - `CUANDO` un desarrollador construye la imagen del servicio y lo levanta en Compose junto a PostgreSQL
+  - `EL SISTEMA DEBE` producir una imagen con el servicio compilado y sus migraciones, que ejecuta como usuario no administrador, y el servicio debe quedar sano (aplica las migraciones y responde `/health/ready` 200).
 
 ### REQ-09: Contrato HTTP documentado
 - **Historia de Usuario:**
@@ -229,16 +233,32 @@ Para operar un portal de pagos cada cliente debe identificarse de forma segura: 
 
 #### Criterios de Aceptación y Comportamiento del Sistema (Sintaxis EARS)
 - **REQ-10.1 (Evento) — AC-AUT-27:**
-  - `CUANDO` el desarrollador ejecuta `npm ci` en la raíz
-  - `EL SISTEMA DEBE` instalar de forma reproducible las dependencias de todos los workspaces con Node.js 24.22.0.
+  - `CUANDO` el desarrollador ejecuta `npm ci` dentro del contenedor Node
+  - `EL SISTEMA DEBE` instalar de forma reproducible las dependencias de todos los workspaces con Node.js 24.22.0 (imagen `node:24.22.0-alpine`), sin instalar nada en el host. El repositorio incluye un `.npmrc` en la raíz con `ignore-scripts=true`.
 - **REQ-10.2 (Evento) — AC-AUT-28:**
-  - `CUANDO` el desarrollador ejecuta `npm run lint`, `npm run typecheck --workspaces --if-present` y `npm run test --workspaces --if-present`
+  - `CUANDO` el desarrollador ejecuta dentro del contenedor Node `npm run lint`, `npm run typecheck --workspaces --if-present` y `npm run test --workspaces --if-present` (este último con la base de datos disponible)
   - `EL SISTEMA DEBE` completarlos sin errores ni advertencias.
 - **REQ-10.3 (Evento) — AC-AUT-29:**
-  - `CUANDO` el desarrollador crea un commit
-  - `EL SISTEMA DEBE` verificar previamente, solo sobre los archivos preparados, lint, formato y tipos, y rechazar el commit si fallan.
+  - `CUANDO` el desarrollador crea un commit con el hook activado (`git config core.hooksPath .githooks`, una vez por clon)
+  - `EL SISTEMA DEBE` ejecutar lefthook dentro del contenedor Node y verificar, solo sobre los archivos preparados, lint, formato y tipos, y rechazar el commit si fallan. El hook de git del host es el script versionado `.githooks/pre-commit`, que invoca `docker compose -f services/auth/compose.dev.yaml run --rm -T --no-deps dev npx lefthook run pre-commit --no-auto-install`. En un git worktree (donde `.git` es un archivo) el hook se omite con un aviso. Sin activar el hook no hay verificación al commit.
 - **REQ-10.4 (Ubicuo) — AC-AUT-30:**
-  - `EL SISTEMA DEBE` versionar todo archivo de texto con saltos de línea LF para que scripts y Dockerfiles funcionen en contenedores.
+  - `EL SISTEMA DEBE` versionar todo archivo de texto con saltos de línea LF (incluidos scripts `.sh` y Dockerfiles) para que funcionen en contenedores.
+
+### REQ-11: Entorno de desarrollo en contenedores
+- **Historia de Usuario:**
+  - **Como:** Desarrollador
+  - **Quiero:** Compilar, probar y ejecutar el servicio solo con Docker
+  - **Para:** Trabajar sin instalar nada en mi máquina
+
+#### Criterios de Aceptación y Comportamiento del Sistema (Sintaxis EARS)
+- **REQ-11.1 (Evento) — AC-AUT-31:**
+  - `CUANDO` el desarrollador ejecuta cualquier comando de compilación, lint, tipos, pruebas o ejecución del servicio mediante `docker compose -f services/auth/compose.dev.yaml run --rm dev ...`
+  - `EL SISTEMA DEBE` ejecutarlo dentro de un contenedor Node 24.22.0 con el repositorio montado en `/app`, sin requerir Node, npm ni otras herramientas en el host (solo Docker y Git). `git` sigue siendo la herramienta de control de versiones en el host; los commits son del host.
+- **REQ-11.2 (Ubicuo) — AC-AUT-32:**
+  - `EL SISTEMA DEBE` ofrecer a las pruebas con base de datos una PostgreSQL 18.6 alcanzable por el nombre de servicio `postgres` en el puerto interno 5432, con el rol `auth_svc` sin permiso para crear esquemas, sin puertos publicados al host y con estado efímero (sin volumen persistente).
+
+### Entorno de Compose (referencia para REQ-8.4 y REQ-10 a REQ-11)
+Archivo `services/auth/compose.dev.yaml` (proyecto Compose `fluxone-auth-dev`) con tres servicios: `postgres` (`postgres:18.6-alpine`; crea el rol `auth_svc` y el esquema `auth_schema` con un script de inicialización), `dev` (imagen basada en `node:24.22.0-alpine`, repositorio montado en `/app`; ejecuta npm, lint, tipos, pruebas y lefthook; alcanza la base de datos en `postgres:5432`) y `auth` (el servicio empaquetado, con el puerto 3001 publicado para depuración y chequeo de salud). Prefijo de todo comando: `docker compose -f services/auth/compose.dev.yaml`. Los comandos sin base de datos usan `run --rm --no-deps dev <cmd>`; los que la necesitan usan `run --rm dev <cmd>` (Compose levanta `postgres` y espera su healthcheck). Limpieza: `down -v`.
 
 ---
 
@@ -257,6 +277,8 @@ Para operar un portal de pagos cada cliente debe identificarse de forma segura: 
 | **EC-10** | Contraseña de exactamente 12 o 128 caracteres; de 11 o 129 | Las de 12 y 128 se aceptan; las de 11 y 129 reciben 400 `VALIDATION_ERROR`. |
 | **EC-11** | Inicio de sesión con email inexistente | Misma respuesta que con contraseña errónea (401 `INVALID_CREDENTIALS`). |
 | **EC-12** | Intentos desde IP distintas | Cada IP tiene su propio límite. |
+| **EC-13** | Se ejecutan las pruebas de base de datos varias veces seguidas sobre el mismo contenedor de PostgreSQL | Las migraciones ya aplicadas no se repiten y cada prueba parte de tablas vacías. |
+| **EC-14** | El hook de commit se activa dentro de un git worktree | Se omite con un aviso y no bloquea el commit. |
 
 ---
 
@@ -264,11 +286,12 @@ Para operar un portal de pagos cada cliente debe identificarse de forma segura: 
 - **Tiempo de Respuesta Operativo (SLA de Usuario):** El registro y el inicio de sesión deben ser perceptibles como inmediatos (menos de 1 segundo en condiciones normales; el costo del cálculo de la huella de la contraseña es el límite).
 - **Privacidad y Cumplimiento Normativo:** El único dato personal almacenado es el email. Las contraseñas se conservan solo como huella Argon2id. Ningún secreto aparece en registros ni en errores.
 - **Continuidad de Negocio:** Un reinicio del servicio no invalida las sesiones ni las credenciales vigentes.
+- **Credenciales de desarrollo:** El entorno de Compose de desarrollo usa credenciales desechables solo para desarrollo (sin puertos de base de datos publicados, sin datos persistentes); no son secretos del proyecto.
 
 ---
 
 ## Trazabilidad de criterios de aceptación
-Cada prueba automatizada incluye su ID `[AC-AUT-NN]` en el nombre. Las rutas de pruebas son relativas a `services/auth/`.
+Cada prueba automatizada incluye su ID `[AC-AUT-NN]` en el nombre. Las rutas de pruebas son relativas a `services/auth/`. Los comandos se ejecutan desde la raíz del repositorio y todos usan el prefijo `docker compose -f services/auth/compose.dev.yaml`. En las celdas de la tabla el carácter `|` de un comando se escribe `\|` por sintaxis de tabla. Las pruebas de integración y aceptación (proyecto `db` de Vitest) usan la PostgreSQL 18.6 del servicio `postgres` (rol `auth_svc`; `DATABASE_URL` con host `postgres` y puerto 5432) y ejecutan sus archivos de forma secuencial porque comparten una DB.
 
 | AC | Criterio | Verificación |
 |:---|:---|:---|
@@ -296,9 +319,11 @@ Cada prueba automatizada incluye su ID `[AC-AUT-NN]` en el nombre. Las rutas de 
 | AC-AUT-22 | REQ-8.1: `/health/live` responde 200; `/health/ready` responde 200 o 503 según la DB | `tests/acceptance/operability.test.ts` |
 | AC-AUT-23 | REQ-8.2: todo error usa `{error:{code,message}}` en español sin datos sensibles | `tests/acceptance/operability.test.ts` |
 | AC-AUT-24 | REQ-8.3: eventos de autenticación en logs JSON sin secretos | `tests/acceptance/operability.test.ts` |
-| AC-AUT-25 | REQ-8.4: imagen de contenedor con el servicio compilado y migraciones, como usuario no administrador | comando `docker build -f services/auth/Dockerfile -t fluxone-auth:local .` (desde la raíz del repositorio) con código de salida 0 |
+| AC-AUT-25 | REQ-8.4: imagen con el servicio compilado y migraciones, como usuario no administrador, y servicio sano en Compose junto a PostgreSQL | en orden: (1) `docker compose -f services/auth/compose.dev.yaml build auth` (exit 0); (2) `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps --entrypoint sh auth -c "ls services/auth/dist/main.js services/auth/migrations && id -un"` (lista ambos y muestra `node`); (3) `docker compose -f services/auth/compose.dev.yaml up -d --wait auth` (exit 0; el healthcheck consulta `/health/ready`); (4) `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "fetch('http://auth:3001/.well-known/jwks.json').then((r) => process.exit(r.ok ? 0 : 1))"` (exit 0; alcanza el servicio por su nombre en la red de Compose); (5) `docker compose -f services/auth/compose.dev.yaml down -v` (limpieza) |
 | AC-AUT-26 | REQ-9.1: `services/auth/openapi.yaml` (OpenAPI 3.1) describe todos los endpoints | `tests/acceptance/openapi.test.ts` |
-| AC-AUT-27 | REQ-10.1: `npm ci` instala de forma reproducible con Node.js 24.22.0 | comando `npm ci` (raíz) |
-| AC-AUT-28 | REQ-10.2: lint, typecheck y tests sin errores ni advertencias | comandos `npm run lint`, `npm run typecheck --workspaces --if-present`, `npm run test --workspaces --if-present` (raíz) |
-| AC-AUT-29 | REQ-10.3: verificación previa a cada commit de lint, formato y tipos sobre archivos preparados | comando `npx lefthook validate` (raíz) |
-| AC-AUT-30 | REQ-10.4: archivos de texto versionados con saltos de línea LF | comando `git check-attr eol -- services/auth/Dockerfile` debe mostrar `eol: lf` |
+| AC-AUT-27 | REQ-10.1: `npm ci` dentro del contenedor Node instala de forma reproducible con Node.js 24.22.0, sin instalar nada en el host | comando `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm ci` (exit 0) |
+| AC-AUT-28 | REQ-10.2: lint, typecheck y tests dentro del contenedor sin errores ni advertencias | comandos `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run lint`, `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run typecheck --workspaces --if-present` y `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test --workspaces --if-present` (este con base de datos) |
+| AC-AUT-29 | REQ-10.3: lefthook en el contenedor verifica lint, formato y tipos sobre archivos preparados en cada commit con el hook activado | (a) `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev sh -c "git init -q /tmp/lh && cp lefthook.yml /tmp/lh/ && cd /tmp/lh && /app/node_modules/.bin/lefthook validate \| grep -q 'All good'"` (exit 0); (b) `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "const f=require('node:fs').readFileSync('.githooks/pre-commit','utf8');if(!f.includes('lefthook run pre-commit'))process.exit(1)"` (exit 0) |
+| AC-AUT-30 | REQ-10.4: archivos de texto versionados con saltos de línea LF | comando `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');if(!fs.readFileSync('.gitattributes','utf8').includes('Dockerfile* text eol=lf')\|\|fs.readFileSync('services/auth/docker/postgres-init/01-auth-role-schema.sh','utf8').includes('\r'))process.exit(1)"` (exit 0) |
+| AC-AUT-31 | REQ-11.1: los comandos corren en un contenedor Node 24.22.0 con el repositorio montado, sin herramientas en el host | comandos `docker compose -f services/auth/compose.dev.yaml config -q` (exit 0) y `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node --version` (muestra `v24.22.0`) |
+| AC-AUT-32 | REQ-11.2: PostgreSQL 18.6 en `postgres:5432`, rol `auth_svc` sin permiso de crear esquemas, sin puertos publicados y efímera | `tests/integration/environment.test.ts` (afirma versión 18.6, `current_user` = `auth_svc`, que `CREATE SCHEMA` es rechazado con código 42501 y que `DATABASE_URL` apunta a host `postgres` y puerto 5432), con `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db tests/integration/environment.test.ts` |
