@@ -18,12 +18,12 @@ El servicio se compila, prueba y ejecuta solo con Docker, sin instalar nada en e
 
 | Fase | Estado |
 |:---|:---:|
-| Phase 1: Foundation & Domain | `En progreso` |
+| Phase 1: Foundation & Domain | `Completado` |
 | Phase 2: Core Logic & Application | `Pendiente` |
 | Phase 3: Presentation & Endpoints | `Pendiente` |
 | Phase 4: Verification & Polish | `Pendiente` |
 
-**Progreso global:** `17%` (2 de 12 tareas completadas)
+**Progreso global:** `25%` (3 de 12 tareas completadas)
 
 ## Qué puede hacer ya el usuario / Qué falta
 

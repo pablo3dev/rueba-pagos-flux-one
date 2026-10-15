@@ -55,7 +55,7 @@
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run format:check`
   - **Evidencia:** salida de cada comando. Si `npm ci` o `tsc` fallan por versiones, se reporta (no se cambian versiones sin escalar).
 
-- [ ] **Task 1.3: Dominio puro con pruebas unitarias** `[REQ-1.6, REQ-1.7, REQ-2.1, REQ-2.2, REQ-4.2, REQ-4.3, REQ-4.4, REQ-4.5, REQ-4.6, REQ-5.5, REQ-6.2]` `[DESIGN §3.1]`
+- [x] **Task 1.3: Dominio puro con pruebas unitarias** `[REQ-1.6, REQ-1.7, REQ-2.1, REQ-2.2, REQ-4.2, REQ-4.3, REQ-4.4, REQ-4.5, REQ-4.6, REQ-5.5, REQ-6.2]` `[DESIGN §3.1]`
   - **Archivos:**
     - `services/bank-rail/src/domain/errors.ts`
     - `services/bank-rail/src/domain/amount.ts`
@@ -247,11 +247,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 3 | 2 | `In Progress` |
+| **Phase 1: Foundation & Domain** | 3 | 3 | `Done` |
 | **Phase 2: Core Logic & Application** | 2 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **12** | **2** | **17%** |
+| **Total Global** | **12** | **3** | **25%** |
 
 ---
 
