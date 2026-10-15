@@ -18,6 +18,6 @@ graph LR
 
 | Spec | Estado | Creación | Paralelizable con | Ruta | Depende de |
 |---|:---:|:---:|:---:|---|---|
-| riel-bancario-simulado-bank-rail | `Pendiente` | `Creado — pendiente aprobación` | `—` | `riel-bancario-simulado-bank-rail/summary.md` | [autenticacion-usuarios-auth](../auth/autenticacion-usuarios-auth/summary.md) |
+| riel-bancario-simulado-bank-rail | `Pendiente` | `Aprobado` | `—` | `riel-bancario-simulado-bank-rail/summary.md` | [autenticacion-usuarios-auth](../auth/autenticacion-usuarios-auth/summary.md) |
 
 > `domain-model.md` es el del Contexto Delimitado del banco simulado. El spec pertenece a la feature `riel-bancario-simulado`; los demás specs de la capacidad viven en los `INDEX.md` de sus unidades.
