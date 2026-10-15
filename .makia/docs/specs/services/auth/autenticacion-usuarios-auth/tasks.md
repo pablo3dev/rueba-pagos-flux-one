@@ -81,7 +81,7 @@
     - `migrations.test.ts` verifica las tablas `users`, `refresh_tokens`, `signing_keys`, el CHECK `users_email_lower_chk`, el índice único parcial `signing_keys_one_active`, las FKs y la unicidad de `token_hash`.
     - `environment.test.ts` afirma `[AC-AUT-32]`: versión de PostgreSQL 18.6, `current_user` = `auth_svc`, `CREATE SCHEMA` rechazado con código 42501 y `DATABASE_URL` con host `postgres` y puerto 5432.
 
-- [ ] **Task 1.6: [P] Dominio puro con pruebas unitarias** `[REQ-1.1, REQ-1.4, REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4]` `[DESIGN §3.1]`
+- [x] **Task 1.6: [P] Dominio puro con pruebas unitarias** `[REQ-1.1, REQ-1.4, REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4]` `[DESIGN §3.1]`
   - **Archivos:** `services/auth/src/domain/errors.ts`, `services/auth/src/domain/email.ts`, `services/auth/src/domain/password-policy.ts`, `services/auth/src/domain/user.ts`, `services/auth/src/domain/refresh-token.ts`, `services/auth/src/domain/signing-key.ts`, `services/auth/tests/unit/domain/email.test.ts`, `services/auth/tests/unit/domain/password-policy.test.ts`, `services/auth/tests/unit/domain/refresh-token.test.ts`
   - **Depende de:** 1.4
   - **Alcance:** errores de dominio, normalización de email, política de contraseña, entidades `User`, `RefreshToken`, `SigningKey` y la función `decideRotation`, según `design.md § 3.1`.
@@ -248,11 +248,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 6 | 5 | `In Progress` |
+| **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
 | **Phase 2: Core Logic & Application** | 3 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **5** | **31%** |
+| **Total Global** | **16** | **6** | **38%** |
 
 ---
 
