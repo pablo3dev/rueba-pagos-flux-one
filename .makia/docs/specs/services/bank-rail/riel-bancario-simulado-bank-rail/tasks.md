@@ -28,7 +28,7 @@
 ## 3. Phase Breakdown & Actionable Tasks
 
 ### Phase 1: Foundation, Schemas & Core Domain
-- [ ] **Task 1.1: Entorno de contenedores de desarrollo** `[REQ-9.1]` `[DESIGN §2.3, §5]`
+- [x] **Task 1.1: Entorno de contenedores de desarrollo** `[REQ-9.1]` `[DESIGN §2.3, §5]`
   - **Archivos:**
     - `services/bank-rail/compose.dev.yaml` (crear; solo el servicio `dev` y los volúmenes con nombre `node_modules_root`, `node_modules_bank_rail`, `npm_cache`)
     - `services/bank-rail/Dockerfile` (crear; solo la etapa `dev`)
@@ -247,11 +247,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 3 | 0 | `Pending` |
+| **Phase 1: Foundation & Domain** | 3 | 1 | `In Progress` |
 | **Phase 2: Core Logic & Application** | 2 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **12** | **0** | **0%** |
+| **Total Global** | **12** | **1** | **8%** |
 
 ---
 
