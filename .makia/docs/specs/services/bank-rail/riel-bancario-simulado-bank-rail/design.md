@@ -92,7 +92,13 @@ El host solo tiene Docker y Git: no se instala nada en él y todo comando de com
 
 **Red.** Los servicios comparten la red por defecto del proyecto Compose: cualquier otro contenedor llega al riel por `bank-rail:3004`. El puerto 3004 del host es solo para depuración.
 
-**Ownership y volúmenes.** `node_modules` vive en volúmenes con nombre (`node_modules_root` en `/app/node_modules`, `node_modules_bank_rail` en `/app/services/bank-rail/node_modules`) y la caché de npm en `npm_cache` (`/root/.npm`): así no se escriben binarios Linux en el árbol del host y el bind mount es más rápido en Docker Desktop. Los archivos que el contenedor `dev` escribe en el árbol (lockfile, `dist`) los crea `root` dentro del contenedor; el `Dockerfile` registra `/app` como `safe.directory` de git. El libro del servicio vive en el volumen `rail_data` (`/data`); la imagen runtime crea `/data` con propietario `node` para que el volumen nuevo herede ese propietario y el usuario no administrador pueda escribir.
+**Ownership y volúmenes.** `node_modules` vive en volúmenes con nombre (`node_modules_root` en `/app/node_modules`, `node_modules_bank_rail` en `/app/services/bank-rail/node_modules`) y la caché de npm en `npm_cache` (`/root/.npm`): así no se escriben binarios Linux en el árbol del host y el bind mount es más rápido en Docker Desktop. Los archivos que el contenedor `dev` escribe en el árbol (lockfile, `dist`) los crea `root` dentro del contenedor; el `Dockerfile` registra `/app` como `safe.directory` de git. La comprobación de la tarea 1.1 anula el `working_dir: /app` del servicio `dev` y ejecuta `git` con cwd `/`:
+
+```text
+docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps -w / dev sh -c "git config --system --get-all safe.directory | grep -qx /app"
+```
+
+`git` no se ejecuta con cwd `/app` ni con ningún cwd desde el que Git descubra `/app/.git`. Ese archivo es un gitfile de worktree (`gitdir:` hacia una ruta del host que el contenedor no ve). Si Git lo descubre al arrancar, sale 1 con `fatal: not a git repository: (null)` aunque la imagen ya tenga `safe.directory=/app`. No se monta un volumen sobre `/app/.git`. El Compose y la etapa `dev` del `Dockerfile` de este apartado no cambian. El libro del servicio vive en el volumen `rail_data` (`/data`); la imagen runtime crea `/data` con propietario `node` para que el volumen nuevo herede ese propietario y el usuario no administrador pueda escribir.
 
 **Contenido exacto de `services/bank-rail/compose.dev.yaml` (tarea 1.1).**
 

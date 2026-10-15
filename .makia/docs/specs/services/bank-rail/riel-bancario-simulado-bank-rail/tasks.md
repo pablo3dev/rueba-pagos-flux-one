@@ -38,7 +38,7 @@
     - `docker compose -f services/bank-rail/compose.dev.yaml config -q`
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev node --version` (muestra `v24.22.0`)
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev git --version`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev sh -c "git config --system --get-all safe.directory | grep -qx /app"`
+    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps -w / dev sh -c "git config --system --get-all safe.directory | grep -qx /app"` (`-w /`: `git` corre con cwd `/`. Prohibido ejecutarlo con cwd `/app` o con cualquier cwd desde el que Git descubra `/app/.git`. Ese archivo es un gitfile de worktree; si Git lo descubre, sale 1 con `fatal: not a git repository: (null)` aunque la imagen ya tenga `safe.directory=/app`. No montar un volumen sobre `/app/.git`.)
     - limpieza: `docker compose -f services/bank-rail/compose.dev.yaml down -v`
   - **Evidencia:** salida de cada comando.
 
