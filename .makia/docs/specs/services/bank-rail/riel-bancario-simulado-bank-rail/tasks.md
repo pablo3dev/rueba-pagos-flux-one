@@ -13,12 +13,13 @@
 - **Sequential Ordering:** ejecutar las fases en orden estricto; dentro de cada fase, las subtareas atómicas se completan antes de pasar a la siguiente. Una tarea solo inicia cuando todas las tareas listadas en su campo **Depende de** están marcadas `[x]`. El orden sigue datos → reglas → interfaces e infraestructura.
 - **Test-Verified:** cada funcionalidad debe tener su prueba correspondiente antes de marcarse `[x]`. Las pruebas incluyen en su nombre el ID `[AC-RIE-NN]` del criterio que verifican.
 - **Traceability Tags:** cada tarea referencia su origen en `requirements.md` (ej. `[REQ-1.1]`) y su componente en `design.md` (ej. `[DESIGN §5]`).
-- **Rutas:** todas las rutas son relativas a la raíz del repositorio. Los archivos de raíz del monorepo (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc`, `.gitattributes`, `.dockerignore`, `lefthook.yml`, `.githooks/pre-commit`) ya existen y este spec no los toca; su único archivo de raíz tocado es `package-lock.json`.
-- **Entorno:** todo comando se ejecuta dentro del contenedor `dev` (nada se ejecuta en el host salvo `git` y `docker`). Los comandos se lanzan desde la raíz del repositorio con el prefijo `docker compose -f services/bank-rail/compose.dev.yaml`. No hay base de datos: todo comando de `dev` usa `run --rm --no-deps dev`.
-- **Comando de pruebas `unit`:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project unit <ruta>`.
-- **Comando de pruebas `acceptance`:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance <ruta>`.
-- **Typecheck del servicio:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run typecheck -w services/bank-rail`.
-- **Limpieza:** `docker compose -f services/bank-rail/compose.dev.yaml down -v`.
+- **Rutas:** las rutas de archivos son relativas a la raíz del repositorio. Toda tarea pendiente solo crea o modifica archivos bajo `services/bank-rail/`. Los docs del spec en `.makia/docs/` no son archivos de la unidad. La única excepción es la tarea 1.4, que restaura `package-lock.json` de la raíz y no toca ningún otro archivo fuera de la unidad. No se tocan `package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc`, `.gitattributes`, `.dockerignore`, `lefthook.yml` ni `.githooks/pre-commit` de la raíz.
+- **Entorno:** todo comando de compilación, prueba y ejecución corre dentro del contenedor `dev` (en el host solo `git` y `docker`). El directorio de trabajo de todo comando `docker compose` es `services/bank-rail`. Prefijo: `docker compose -f compose.dev.yaml`. Sin base de datos: `run --rm --no-deps dev`. El contexto de build es esa carpeta, no la raíz del repositorio. El paquete no se instala como workspace npm de la raíz.
+- **Comando de pruebas `unit`:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project unit <ruta>` (cwd `services/bank-rail`).
+- **Comando de pruebas `acceptance`:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance <ruta>` (cwd `services/bank-rail`).
+- **Typecheck del servicio:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run typecheck` (cwd `services/bank-rail`).
+- **Limpieza:** `docker compose -f compose.dev.yaml down -v` (cwd `services/bank-rail`).
+- **Tareas ya hechas:** 1.1, 1.2, 1.3 y 2.1 permanecen `[x]` y no se reejecutan. La siguiente tarea pendiente es 1.4; 2.2 no empieza hasta que 1.4 esté `[x]`.
 - **Evidencia:** una tarea con campo **Evidencia** solo se marca `[x]` cuando la evidencia descrita queda registrada (salida de comandos o aserciones de las pruebas indicadas).
 - **Archivos de prueba creados antes que las rutas que ejercitan:** `design.md § 5` fija en qué tarea nace cada archivo. Cuando una prueba de aceptación necesita rutas de una tarea posterior, la tarea que la crea la ejecuta solo con el filtro `-t` indicado y la tarea posterior la ejecuta completa; esa tarea posterior es la que cubre el criterio.
 - **Versiones:** si una verificación falla por versiones de dependencias, se reporta; no se cambian versiones sin escalar.
@@ -33,7 +34,7 @@
     - `services/bank-rail/compose.dev.yaml` (crear; solo el servicio `dev` y los volúmenes con nombre `node_modules_root`, `node_modules_bank_rail`, `npm_cache`)
     - `services/bank-rail/Dockerfile` (crear; solo la etapa `dev`)
   - **Depende de:** ninguna (primera tarea, antes de cualquier código de producto).
-  - **Alcance:** crear el entorno 100 % Docker de desarrollo con el contenido exacto de `design.md § 2.3`: `compose.dev.yaml` (proyecto `fluxone-bank-rail-dev`, YAML con comillas simples) con el servicio `dev` (contexto = raíz del repositorio, repositorio montado en `/app`) y la etapa `dev` del `Dockerfile` (`node:24.22.0-alpine`, `git`, `safe.directory /app`, `WORKDIR /app`). No incluye el servicio `bank-rail` ni la imagen runtime (tarea 4.2).
+  - **Alcance:** crear el entorno 100 % Docker de desarrollo con el contenido exacto de `design.md § 2.3`: `compose.dev.yaml` (proyecto `fluxone-bank-rail-dev`, YAML con comillas simples) con el servicio `dev` (contexto = raíz del repositorio, repositorio montado en `/app`) y la etapa `dev` del `Dockerfile` (`node:24.22.0-alpine`, `git`, `safe.directory /app`, `WORKDIR /app`). No incluye el servicio `bank-rail` ni la imagen runtime (tarea 4.2). Tarea ya ejecutada: no se reabre. El layout vigente lo aplica la tarea 1.4.
   - **Criterio de aceptación:** todos con código de salida 0, en este orden:
     - `docker compose -f services/bank-rail/compose.dev.yaml config -q`
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev node --version` (muestra `v24.22.0`)
@@ -45,7 +46,7 @@
 - [x] **Task 1.2: Workspace `services/bank-rail` e instalación reproducible** `[REQ-9.1]` `[DESIGN §1, §5]`
   - **Archivos:** `services/bank-rail/package.json`, `services/bank-rail/tsconfig.json`, `services/bank-rail/tsconfig.build.json`, `services/bank-rail/vitest.config.ts`, `package-lock.json` (modificar: regenerado con `npm install`)
   - **Depende de:** 1.1
-  - **Alcance:** crear el workspace `@fluxone/bank-rail` con las versiones exactas de `design.md § 1` y la configuración de `design.md § 5` (sección "Configuración del workspace"), y regenerar `package-lock.json` con `npm install` dentro del contenedor `dev`. `vitest.config.ts` define los proyectos `unit` y `acceptance`. Es la verificación de versiones: instalación reproducible y chequeos base antes de escribir código de producto.
+  - **Alcance:** crear el workspace `@fluxone/bank-rail` con las versiones exactas de `design.md § 1` y la configuración de `design.md § 5` (sección "Configuración del paquete"), y regenerar `package-lock.json` con `npm install` dentro del contenedor `dev`. `vitest.config.ts` define los proyectos `unit` y `acceptance`. Es la verificación de versiones: instalación reproducible y chequeos base antes de escribir código de producto. Tarea ya ejecutada: no se reabre. El layout vigente lo aplica la tarea 1.4.
   - **Criterio de aceptación:** todos con código de salida 0 y en este orden:
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm install` (regenera `package-lock.json`)
     - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm ci`
@@ -80,6 +81,36 @@
     - `[AC-RIE-06]`/`[AC-RIE-31]` `parseOutcomeWeights` rechaza `1,2,3`, `a,b,c,d`, `-1,2,3,4`, `0,0,0,0` y `25, 25,25,25`, y acepta `100,0,0,0`; `pickByWeights` respeta los límites de cada tramo y nunca devuelve un resultado de peso 0.
     - `[AC-RIE-28]` `parseStoredOperation` rechaza campos faltantes, `reason` en una operación aceptada e incoherencia entre `kind` y sus campos.
 
+- [ ] **Task 1.4: Lockfile y contexto Docker dentro de la unidad** `[REQ-9.1]` `[DESIGN §2.3, §5]`
+  - **Archivos:**
+    - `services/bank-rail/compose.dev.yaml` (modificar al contenido vigente de `design.md § 2.3`: contexto `.`, `dockerfile: Dockerfile`, bind `.:/app`, volúmenes `node_modules_bank_rail` y `npm_cache`; sin `node_modules_root` y sin montar la raíz)
+    - `services/bank-rail/package.json` (modificar: devDependencies y scripts `lint`, `format`, `format:check` de `design.md § 5`)
+    - `services/bank-rail/tsconfig.json` (modificar: deja de extender `../../tsconfig.base.json`; `compilerOptions` de `design.md § 5`)
+    - `services/bank-rail/package-lock.json` (crear: lo genera `npm install` dentro de `dev`)
+    - `services/bank-rail/.npmrc` (crear)
+    - `services/bank-rail/.dockerignore` (crear)
+    - `services/bank-rail/eslint.config.js` (crear)
+    - `services/bank-rail/.prettierrc` (crear)
+    - `services/bank-rail/.prettierignore` (crear)
+    - `package-lock.json` (raíz del repositorio; restaurar al blob `5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d`, padre de `c47181c`; no se edita a mano ni se regenera)
+  - **Depende de:** 2.1
+  - **Alcance:** aplicar el límite de la unidad sobre el layout que dejaron 1.1 y 1.2, sin reescribir el código de producto de 1.3 ni 2.1. El Compose, el Dockerfile (la etapa `dev` ya coincide con `design.md § 2.3` y no se reescribe si ya es esa), el lockfile, el tsconfig y el toolchain npm quedan dentro de `services/bank-rail/`. El contexto de build pasa a ser esa carpeta. Los comandos Docker de esta tarea y de las siguientes se ejecutan con esa carpeta como directorio de trabajo. `npm install` dentro del contenedor solo puede crear o modificar `services/bank-rail/package-lock.json`. La restauración del lockfile de la raíz es el único cambio fuera de la unidad: desde la raíz del repositorio, `git checkout 5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d -- package-lock.json`. No se añade ni se modifica ningún otro archivo fuera de `services/bank-rail/`.
+  - **Criterio de aceptación:** todos con código de salida 0, en este orden:
+    1. Desde la raíz del repositorio: `git checkout 5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d -- package-lock.json` y `git diff --exit-code 5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d -- package-lock.json`. El archivo restaurado no contiene la cadena `@fluxone/bank-rail`.
+    2. Con directorio de trabajo `services/bank-rail`:
+       - `docker compose -f compose.dev.yaml config -q`
+       - `docker compose -f compose.dev.yaml run --rm --no-deps dev node --version` (muestra `v24.22.0`)
+       - `docker compose -f compose.dev.yaml run --rm --no-deps dev sh -c "git config --system --get-all safe.directory | grep -qx /app"`
+       - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm install`
+       - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm ci`
+       - `docker compose -f compose.dev.yaml run --rm --no-deps dev node -e "const p=JSON.parse(require('node:fs').readFileSync('package.json','utf8'));for(const d of [p.dependencies,p.devDependencies])for(const v of Object.values(d))if(/[\^~]/.test(v))process.exit(1);if(p.name!=='@fluxone/bank-rail')process.exit(1)"`
+       - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run typecheck`
+       - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run lint`
+       - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run format:check`
+    3. Otra vez desde la raíz del repositorio, después del `npm install`: `git diff --exit-code 5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d -- package-lock.json` (el lockfile de la raíz no volvió a cambiar). Existe `services/bank-rail/package-lock.json`.
+    4. Limpieza, con cwd `services/bank-rail`: `docker compose -f compose.dev.yaml down -v`
+  - **Evidencia:** salida de cada comando. Si `npm ci` o `tsc` fallan por versiones, se reporta (no se cambian versiones sin escalar).
+
 ### Phase 2: Core Logic & Application Layer
 - [x] **Task 2.1: Puertos, flujo de operación, `SerialExecutor` y casos de uso** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-2.1, REQ-2.2, REQ-2.3, REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-4.1, REQ-4.2, REQ-4.3, REQ-4.4, REQ-4.5, REQ-4.6, REQ-4.7, REQ-4.8, REQ-6.4]` `[DESIGN §4.1]`
   - **Archivos:**
@@ -107,9 +138,9 @@
     - `services/bank-rail/tests/unit/adapters/jsonl-file-ledger.test.ts`
     - `services/bank-rail/tests/unit/adapters/random-outcome-picker.test.ts`
     - `services/bank-rail/tests/unit/adapters/system-delay.test.ts`
-  - **Depende de:** 2.1
+  - **Depende de:** 1.4, 2.1
   - **Alcance:** implementar los puertos `Ledger` (`JsonlFileLedger`: carga, índices, línea final truncada, línea corrupta, `append` serializado), `OutcomePicker` (`RandomOutcomePicker`) y `Delay` (`SystemDelay`), según `design.md § 3.2` y `§ 4.3`.
-  - **Criterio de aceptación:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project unit tests/unit/adapters`
+  - **Criterio de aceptación:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project unit tests/unit/adapters`
   - **Evidencia (comportamiento crítico: persistencia del ledger):**
     - `[AC-RIE-26]` `open` crea el directorio y el archivo si no existen y arranca con el libro vacío.
     - `[AC-RIE-24]` cada `append` deja exactamente una línea JSON terminada en `\n` con las claves en el orden de `design.md § 3.2`, y `append` resuelve solo después de escribir.
@@ -124,7 +155,7 @@
   - **Archivos:** `services/bank-rail/src/config.ts`, `services/bank-rail/tests/unit/config.test.ts`
   - **Depende de:** 2.2
   - **Alcance:** `loadConfig(env)` con la tabla de variables de `design.md § 4.3` (`PORT`, `RAIL_OUTCOME_WEIGHTS`, `RAIL_TIMEOUT_DELAY_MS`, `RAIL_LEDGER_PATH`, `LOG_LEVEL`), con los defaults indicados y errores que nombran la variable.
-  - **Criterio de aceptación:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project unit tests/unit/config.test.ts`
+  - **Criterio de aceptación:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project unit tests/unit/config.test.ts`
   - **Evidencia:**
     - `[AC-RIE-30]` sin variables definidas devuelve `3004`, pesos `25,25,25,25`, `15000`, `/data/rail-ledger.jsonl` e `info`; con valores válidos los respeta.
     - `[AC-RIE-31]` pesos inválidos (`1,2,3`, `a,b,c,d`, `-1,2,3,4`, `0,0,0,0`, `25, 25,25,25`) lanzan un error cuyo mensaje contiene `RAIL_OUTCOME_WEIGHTS`.
@@ -145,10 +176,10 @@
   - **Depende de:** 3.1
   - **Alcance:** `composeApp` (sustitución de `OutcomePicker`, `Delay` y `Ledger`), `main.ts` (arranque, cierre ordenado y salida con código 1 y mensaje en `stderr` si la configuración o el ledger son inválidos), `buildApp` (Fastify con Ajv sin `removeAdditional` ni `coerceTypes`, hooks `rail.request`/`rail.response`, manejadores de error y de ruta inexistente, redacción de `authorization` y `cookie`, advertencias de `loadWarnings` como logs), esquemas, presentador de respuestas, ruta `GET /health` y el helper `buildTestApp`. Las rutas de transferencias y reversos las registran las tareas 3.3 y 3.4: las pruebas que necesitan un `POST` (parte de `operability.test.ts` y `composition.test.ts`) se ejecutan completas en 3.3 y 3.4, que son las tareas que cubren REQ-6.4 y REQ-7.2..7.4 de extremo a extremo; aquí se cubre lo que no requiere esas rutas.
   - **Criterio de aceptación:** todos con código de salida 0, en este orden:
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run typecheck -w services/bank-rail`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance tests/acceptance/operability.test.ts -t "AC-RIE-34"`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance tests/acceptance/operability.test.ts -t "AC-RIE-36"`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps -w /app/services/bank-rail -e RAIL_OUTCOME_WEIGHTS=0,0,0,0 dev sh -c 'out=$(npx tsx src/main.ts 2>&1); rc=$?; printf "%s\n" "$out" | grep -q RAIL_OUTCOME_WEIGHTS && [ "$rc" -ne 0 ]'`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run typecheck`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance tests/acceptance/operability.test.ts -t "AC-RIE-34"`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance tests/acceptance/operability.test.ts -t "AC-RIE-36"`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps -e RAIL_OUTCOME_WEIGHTS=0,0,0,0 dev sh -c 'out=$(npx tsx src/main.ts 2>&1); rc=$?; printf "%s\n" "$out" | grep -q RAIL_OUTCOME_WEIGHTS && [ "$rc" -ne 0 ]'`
   - **Evidencia:**
     - `[AC-RIE-34]` `GET /health` responde 200 `{status:"ok"}`.
     - `[AC-RIE-36]` `GET /health` con cabecera `Authorization` responde igual que sin ella.
@@ -164,7 +195,7 @@
     - `services/bank-rail/tests/acceptance/persistence.test.ts`
   - **Depende de:** 3.2
   - **Alcance:** exponer `POST /rail/transfers` (validación, idempotencia, sorteo, observer con `rail.outcome_chosen` y `rail.timeout`) y `GET /rail/transfers/{reference}` (solo lectura) según `design.md § 4.2`, y verificar de extremo a extremo la idempotencia, el conflicto, la concurrencia, el timeout y la persistencia del ledger con `buildTestApp`. Incluye ejecutar completo `composition.test.ts` (REQ-6.4).
-  - **Criterio de aceptación:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance tests/acceptance/transfers.test.ts tests/acceptance/idempotency.test.ts tests/acceptance/lookup.test.ts tests/acceptance/persistence.test.ts tests/acceptance/composition.test.ts`
+  - **Criterio de aceptación:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance tests/acceptance/transfers.test.ts tests/acceptance/idempotency.test.ts tests/acceptance/lookup.test.ts tests/acceptance/persistence.test.ts tests/acceptance/composition.test.ts`
   - **Evidencia (comportamiento crítico: idempotencia y persistencia del ledger):**
     - `[AC-RIE-08]` repetir la referencia con los mismos datos (incluido `10` y luego `10.00`) devuelve el mismo status y cuerpo, con `pickCalls` sin cambio, `delay.waits` sin cambio y sin línea nueva en el archivo.
     - `[AC-RIE-09]` misma referencia con `from`, `to` o monto distintos, o con una referencia que ya pertenece a un reverso, responde 409 `REFERENCE_CONFLICT` y el archivo no cambia.
@@ -190,7 +221,7 @@
     - `services/bank-rail/tests/acceptance/reversals.test.ts`
   - **Depende de:** 3.3
   - **Alcance:** exponer `POST /rail/reversals` según `design.md § 4.2` y verificar de extremo a extremo las reglas de reverso. Incluye ejecutar completo `operability.test.ts` (que ya existe desde 3.2) para cubrir REQ-7.2, REQ-7.3 y REQ-7.4 con los `POST` disponibles.
-  - **Criterio de aceptación:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance tests/acceptance/reversals.test.ts tests/acceptance/operability.test.ts`
+  - **Criterio de aceptación:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance tests/acceptance/reversals.test.ts tests/acceptance/operability.test.ts`
   - **Evidencia (comportamiento crítico: reglas de reverso):**
     - `[AC-RIE-16]` reverso válido sobre transferencia aceptada con el mismo monto y sorteo ACCEPTED responde 200 y el archivo guarda la línea con `originalReference`.
     - `[AC-RIE-17]`..`[AC-RIE-20]` `ORIGINAL_NOT_FOUND`, `ORIGINAL_NOT_ACCEPTED` (original rechazada y original que es un reverso aceptado), `AMOUNT_MISMATCH` y `ALREADY_REVERSED` responden 422 con su propio `code`, quedan registrados como rechazados con ese motivo y `pickCalls` no aumenta; un reverso previo rechazado no cuenta: el nuevo reverso de la misma original con otra referencia supera las reglas y se sortea.
@@ -207,7 +238,7 @@
   - **Archivos:** `services/bank-rail/openapi.yaml`, `services/bank-rail/tests/acceptance/openapi.test.ts`
   - **Depende de:** 3.4
   - **Alcance:** documentar el contrato HTTP del servicio en OpenAPI 3.1 según `design.md § 5` (sección "Contrato OpenAPI") y verificarlo con una prueba.
-  - **Criterio de aceptación:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance tests/acceptance/openapi.test.ts`
+  - **Criterio de aceptación:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance tests/acceptance/openapi.test.ts`
   - **Evidencia:** `[AC-RIE-39]` el archivo declara `openapi: 3.1.x`, describe los cuatro paths de `design.md § 4.2` con sus métodos, los esquemas `TransferRequest`, `ReversalRequest`, `OperationStatus` y `ErrorResponse`, todos los códigos de estado y `code` de error de la tabla de mensajes, y ningún esquema de seguridad.
 
 - [ ] **Task 4.2: [P] Imagen de contenedor del servicio y ejecución en Compose** `[REQ-7.5, REQ-9.1]` `[DESIGN §2.3, §5]`
@@ -215,31 +246,31 @@
     - `services/bank-rail/Dockerfile` (modificar: añadir las etapas `build` y runtime tras la etapa `dev` de 1.1, según `design.md § 5`)
     - `services/bank-rail/compose.dev.yaml` (modificar: añadir el servicio `bank-rail` y el volumen `rail_data`, con el contenido de `design.md § 2.3`)
   - **Depende de:** 3.4
-  - **Alcance:** etapas de compilación y runtime del Dockerfile (usuario `node`, `/data` con propietario `node`) y servicio `bank-rail` en Compose (puerto `3004:3004`, volumen `rail_data` en `/data`, healthcheck a `/health`).
+  - **Alcance:** las etapas `build` y runtime y el servicio `bank-rail` siguen `design.md § 2.3` y `§ 5` (contexto `.`, no la raíz; `CMD` `node dist/main.js`). Usuario `node`, `/data` con propietario `node`, puerto `3004:3004`, volumen `rail_data` en `/data`, healthcheck a `/health`.
   - **Criterio de aceptación:** todos con código de salida 0, en este orden:
-    - `docker compose -f services/bank-rail/compose.dev.yaml config -q`
-    - `docker compose -f services/bank-rail/compose.dev.yaml build bank-rail`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps --entrypoint sh bank-rail -c "ls services/bank-rail/dist/main.js && id -un"` (lista el archivo y muestra `node`)
-    - `RAIL_OUTCOME_WEIGHTS=100,0,0,0 docker compose -f services/bank-rail/compose.dev.yaml up -d --wait bank-rail`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev node -e "fetch('http://bank-rail:3004/rail/transfers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reference:'PERSIST-1',from:'ACC-001',to:'EXT-0001',amount:'10.00'})}).then((r)=>process.exit(r.status===200?0:1))"`
-    - `docker compose -f services/bank-rail/compose.dev.yaml up -d --force-recreate --wait bank-rail`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev node -e "fetch('http://bank-rail:3004/rail/transfers/PERSIST-1').then((r)=>process.exit(r.status===200?0:1))"`
-    - limpieza: `docker compose -f services/bank-rail/compose.dev.yaml down -v`
+    - `docker compose -f compose.dev.yaml config -q`
+    - `docker compose -f compose.dev.yaml build bank-rail`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps --entrypoint sh bank-rail -c "ls dist/main.js && id -un"` (lista el archivo y muestra `node`)
+    - `RAIL_OUTCOME_WEIGHTS=100,0,0,0 docker compose -f compose.dev.yaml up -d --wait bank-rail`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev node -e "fetch('http://bank-rail:3004/rail/transfers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reference:'PERSIST-1',from:'ACC-001',to:'EXT-0001',amount:'10.00'})}).then((r)=>process.exit(r.status===200?0:1))"`
+    - `docker compose -f compose.dev.yaml up -d --force-recreate --wait bank-rail`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev node -e "fetch('http://bank-rail:3004/rail/transfers/PERSIST-1').then((r)=>process.exit(r.status===200?0:1))"`
+    - limpieza: `docker compose -f compose.dev.yaml down -v`
   - **Evidencia (comportamiento crítico: persistencia en el contenedor):** `[AC-RIE-38]` salida de cada comando: el `POST` responde 200 con los pesos `100,0,0,0` y, tras recrear el contenedor sin borrar volúmenes, el `GET` de `PERSIST-1` responde 200.
 
 - [ ] **Task 4.3: Verificación global del spec** `[REQ-9.1]` `[DESIGN §5, §8.3]`
   - **Archivos:** ninguno (solo verificación).
   - **Depende de:** 4.1, 4.2
-  - **Alcance:** ejecutar la verificación completa del monorepo dentro del contenedor `dev` y confirmar la cobertura de los criterios de aceptación AC-RIE-01..40.
+  - **Alcance:** verificación del paquete de la unidad dentro de `dev` y confirmación de la cobertura de los criterios de aceptación AC-RIE-01..40. Directorio de trabajo `services/bank-rail`.
   - **Criterio de aceptación:** todos con código de salida 0:
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm ci`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run lint`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run format:check`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run typecheck --workspaces --if-present`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail`
-    - `docker compose -f services/bank-rail/compose.dev.yaml config -q`
-    - `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev node --version` (muestra `v24.22.0`)
-    - `docker compose -f services/bank-rail/compose.dev.yaml down -v`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm ci`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run lint`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run format:check`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run typecheck`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test`
+    - `docker compose -f compose.dev.yaml config -q`
+    - `docker compose -f compose.dev.yaml run --rm --no-deps dev node --version` (muestra `v24.22.0`)
+    - `docker compose -f compose.dev.yaml down -v`
   - **Evidencia:** salida de cada comando y recuento de pruebas que incluyen `[AC-RIE-` (deben aparecer los AC-RIE-01 a AC-RIE-37 y AC-RIE-39; AC-RIE-38 y AC-RIE-40 se verifican con los comandos de las tareas 4.2 y de esta tarea).
 
 ---
@@ -247,11 +278,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 3 | 3 | `Done` |
+| **Phase 1: Foundation & Domain** | 4 | 3 | `In Progress` |
 | **Phase 2: Core Logic & Application** | 2 | 1 | `In Progress` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **12** | **4** | **33%** |
+| **Total Global** | **13** | **4** | **31%** |
 
 ---
 

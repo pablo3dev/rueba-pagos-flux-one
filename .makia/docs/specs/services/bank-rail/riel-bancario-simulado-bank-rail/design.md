@@ -3,8 +3,8 @@
 ## 1. Metadata & Traceability
 - **Spec:** `riel-bancario-simulado-bank-rail`
 - **Requirements Ref:** `requirements.md` (spec: `riel-bancario-simulado-bank-rail`)
-- **Depende de:** `autenticacion-usuarios-auth` (ya entregado; no se reconstruye). Aporta los archivos de raíz `package.json` (workspaces `apps/*` y `services/*`), `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc` (`ignore-scripts=true`), `.gitattributes`, `.dockerignore`, `lefthook.yml` y `.githooks/pre-commit`. Este spec no crea ni modifica ninguno de ellos; su único archivo de raíz tocado es `package-lock.json` (Modificar, regenerado al añadir el workspace).
-- **Target Stack:** Node.js 24.22.0 (`node:24.22.0-alpine`), TypeScript 6.0.3 ESM estricto, Fastify 5.12.7, Vitest 5.0.5, tsx 4.23.15. Raíz del monorepo (ya instalada por el spec de auth): ESLint 10.12.0, @eslint/js 10.0.1, typescript-eslint 8.71.2, eslint-config-prettier 10.1.8, globals 17.13.0, Prettier 3.9.10, lefthook 2.1.12, @types/node 24.19.2, typescript 6.0.3.
+- **Depende de:** `autenticacion-usuarios-auth` (ya entregado; no se reconstruye). Ese spec ya entregó en la raíz `package.json` (workspaces `apps/*` y `services/*`), `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc` (`ignore-scripts=true`), `.gitattributes`, `.dockerignore`, `lefthook.yml` y `.githooks/pre-commit`. Esta unidad no los usa como workspace npm ni como contexto Docker y no los crea ni los modifica. La única excepción fuera de `services/bank-rail/` es la tarea 1.4, que restaura el `package-lock.json` de la raíz al blob del commit `5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d`. La tarea 1.2 commiteó ese archivo en `c47181c` (padre `5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d`, solo +14 líneas). La tarea 1.4 está pendiente, no borra las tareas hechas, restaura ese archivo a ese blob y no modifica ningún otro archivo fuera de `services/bank-rail/`. Tras `npm install` dentro del contenedor, el `package-lock.json` de la raíz sigue igual a ese blob y no contiene `@fluxone/bank-rail`. El hook de commit de auth no se toca.
+- **Target Stack:** Node.js 24.22.0 (`node:24.22.0-alpine`), TypeScript 6.0.3 ESM estricto, Fastify 5.12.7, Vitest 5.0.5, tsx 4.23.15. Dependencias del paquete de la unidad (`services/bank-rail/package.json`): typescript 6.0.3, @types/node 24.19.2, eslint 10.12.0, @eslint/js 10.0.1, typescript-eslint 8.71.2, eslint-config-prettier 10.1.8, globals 17.13.0, prettier 3.9.10.
 - **Contenedores:** imagen `node:24.22.0-alpine` (derivada con `git` para la etapa `dev` del `Dockerfile`), orquestada con Docker Compose. No hay base de datos.
 - **Host:** solo Docker y Git; todo comando de compilación, prueba y ejecución corre en contenedores.
 - **Versiones:** exactas, sin `^` ni `~`, en `services/bank-rail/package.json`.
@@ -64,43 +64,41 @@ graph TD
 
 ### 2.3 Entorno de ejecución en contenedores
 
-El host solo tiene Docker y Git: no se instala nada en él y todo comando de compilación, prueba y ejecución corre dentro de contenedores. El Compose de este servicio es `services/bank-rail/compose.dev.yaml` (proyecto Compose `fluxone-bank-rail-dev`); es un archivo propio, independiente de cualquier otro Compose del repositorio. Lo crea la tarea 1.1 con el servicio `dev`; la tarea 4.2 le añade el servicio `bank-rail` y el volumen `rail_data`. El hook de commit versionado por el spec de auth ejecuta lefthook con el Compose de auth; este spec no lo toca.
+El host solo tiene Docker y Git: no se instala nada en él y todo comando de compilación, prueba y ejecución corre dentro de contenedores. El directorio de trabajo de todo comando Docker de esta unidad es `services/bank-rail`. El prefijo es `docker compose -f compose.dev.yaml` (proyecto Compose `fluxone-bank-rail-dev`). `services/bank-rail/compose.dev.yaml` es un archivo propio de la unidad, independiente de cualquier otro Compose del repositorio. No hay base de datos: los comandos de `dev` usan `run --rm --no-deps dev`.
+
+La tarea 1.1 creó el primer Compose con el contexto de build en la raíz del repositorio. La tarea 1.4 sustituye ese archivo por el contenido de este apartado. Las tareas 1.1, 1.2, 1.3 y 2.1 no se reabren. La tarea 4.2 añade el servicio `bank-rail` y el volumen `rail_data`. El hook de commit de auth no se toca.
+
+El contexto de build de `dev` y de `bank-rail` es `.` (la carpeta de la unidad) y `dockerfile: Dockerfile`. El bind mount del servicio `dev` es `.:/app` con `working_dir: /app`. Los volúmenes con nombre son `node_modules_bank_rail` en `/app/node_modules` y `npm_cache` en `/root/.npm`. Hay un solo volumen de `node_modules`. Así `npm` no ve el `package.json` de la raíz y no escribe un lockfile fuera de la unidad. El paquete `@fluxone/bank-rail` se instala en la unidad: los comandos npm van sin `-w` y sin `--workspaces`. El lockfile vigente es `services/bank-rail/package-lock.json`.
 
 **Servicios**
 
 | Servicio | Imagen / build | Puertos | Volúmenes | Healthcheck | Propósito |
 |:---|:---|:---|:---|:---|:---|
-| `dev` | build de `services/bank-rail/Dockerfile`, etapa `dev` (`node:24.22.0-alpine` + `git`), contexto = raíz del repositorio | ninguno | raíz del repositorio en `/app` (bind mount); volúmenes con nombre `node_modules_root`, `node_modules_bank_rail`, `npm_cache` | ninguno | Ejecuta todos los comandos de compilación, lint, tipos, pruebas e instalación |
-| `bank-rail` (tarea 4.2) | build de `services/bank-rail/Dockerfile` (etapa runtime), contexto = raíz del repositorio | `3004:3004` | volumen con nombre `rail_data` en `/data` | `wget` a `/health` cada 5 s (`start_period` 10 s, 10 reintentos) | Servicio del riel en ejecución |
+| `dev` | build de `services/bank-rail/Dockerfile`, etapa `dev` (`node:24.22.0-alpine` + `git`), contexto `.`, `dockerfile: Dockerfile` | ninguno | bind `.:/app`; `node_modules_bank_rail` en `/app/node_modules`; `npm_cache` en `/root/.npm` | ninguno | Ejecuta todos los comandos de compilación, lint, tipos, pruebas e instalación |
+| `bank-rail` (tarea 4.2) | build de `services/bank-rail/Dockerfile` (etapa runtime), contexto `.`, `dockerfile: Dockerfile` | `3004:3004` | volumen con nombre `rail_data` en `/data` | `wget` a `/health` cada 5 s (`start_period` 10 s, 10 reintentos) | Servicio del riel en ejecución |
 
-**Comandos.** Prefijo de todo comando: `docker compose -f services/bank-rail/compose.dev.yaml`. Como no hay base de datos, todos los comandos de `dev` usan `run --rm --no-deps dev <cmd>`.
+**Comandos.** Directorio de trabajo: `services/bank-rail`. Prefijo: `docker compose -f compose.dev.yaml`. Como no hay base de datos, todos los comandos de `dev` usan `run --rm --no-deps dev`.
 
 | Acción | Comando |
 |:---|:---|
-| Instalar dependencias (genera `package-lock.json` en la tarea 1.2; después `npm ci`) | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm install` / `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm ci` |
-| Compilar | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run build -w services/bank-rail` |
-| Lint | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run lint` |
-| Formato | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run format:check` |
-| Tipos | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run typecheck --workspaces --if-present` |
-| Pruebas `unit` | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project unit` |
-| Pruebas `acceptance` | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance` |
-| Todas las pruebas del servicio | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail` |
-| Construir la imagen runtime (tarea 4.2) | `docker compose -f services/bank-rail/compose.dev.yaml build bank-rail` |
-| Levantar `bank-rail` (tarea 4.2) | `docker compose -f services/bank-rail/compose.dev.yaml up -d --wait bank-rail` |
-| Alcanzar `bank-rail` por la red de Compose (tarea 4.2) | `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev node -e "fetch('http://bank-rail:3004/health').then((r) => process.exit(r.ok ? 0 : 1))"` |
-| Limpiar contenedores y volúmenes | `docker compose -f services/bank-rail/compose.dev.yaml down -v` |
+| Instalar dependencias (la tarea 1.4 genera `services/bank-rail/package-lock.json`; después `npm ci`) | `docker compose -f compose.dev.yaml run --rm --no-deps dev npm install` / `docker compose -f compose.dev.yaml run --rm --no-deps dev npm ci` |
+| Compilar | `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run build` |
+| Lint | `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run lint` |
+| Formato | `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run format:check` |
+| Tipos | `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run typecheck` |
+| Pruebas `unit` | `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project unit` |
+| Pruebas `acceptance` | `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance` |
+| Todas las pruebas del servicio | `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test` |
+| Construir la imagen runtime (tarea 4.2) | `docker compose -f compose.dev.yaml build bank-rail` |
+| Levantar `bank-rail` (tarea 4.2) | `docker compose -f compose.dev.yaml up -d --wait bank-rail` |
+| Alcanzar `bank-rail` por la red de Compose (tarea 4.2) | `docker compose -f compose.dev.yaml run --rm --no-deps dev node -e "fetch('http://bank-rail:3004/health').then((r) => process.exit(r.ok ? 0 : 1))"` |
+| Limpiar contenedores y volúmenes | `docker compose -f compose.dev.yaml down -v` |
 
 **Red.** Los servicios comparten la red por defecto del proyecto Compose: cualquier otro contenedor llega al riel por `bank-rail:3004`. El puerto 3004 del host es solo para depuración.
 
-**Ownership y volúmenes.** `node_modules` vive en volúmenes con nombre (`node_modules_root` en `/app/node_modules`, `node_modules_bank_rail` en `/app/services/bank-rail/node_modules`) y la caché de npm en `npm_cache` (`/root/.npm`): así no se escriben binarios Linux en el árbol del host y el bind mount es más rápido en Docker Desktop. Los archivos que el contenedor `dev` escribe en el árbol (lockfile, `dist`) los crea `root` dentro del contenedor; el `Dockerfile` registra `/app` como `safe.directory` de git. La comprobación de la tarea 1.1 anula el `working_dir: /app` del servicio `dev` y ejecuta `git` con cwd `/`:
+**Ownership y volúmenes.** Un solo volumen de `node_modules` (`node_modules_bank_rail` en `/app/node_modules`) y la caché de npm en `npm_cache` (`/root/.npm`). El lockfile de la unidad y `dist` los escribe `root` dentro del contenedor, sobre el bind de la unidad. El `Dockerfile` registra `/app` como `safe.directory` de git. El montaje ya no incluye un `.git`. La comprobación de `safe.directory` puede correr con cwd `/app`. El libro del servicio vive en el volumen `rail_data` (`/data`); la imagen runtime crea `/data` con propietario `node` para que el volumen nuevo herede ese propietario y el usuario no administrador pueda escribir.
 
-```text
-docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps -w / dev sh -c "git config --system --get-all safe.directory | grep -qx /app"
-```
-
-`git` no se ejecuta con cwd `/app` ni con ningún cwd desde el que Git descubra `/app/.git`. Ese archivo es un gitfile de worktree (`gitdir:` hacia una ruta del host que el contenedor no ve). Si Git lo descubre al arrancar, sale 1 con `fatal: not a git repository: (null)` aunque la imagen ya tenga `safe.directory=/app`. No se monta un volumen sobre `/app/.git`. El Compose y la etapa `dev` del `Dockerfile` de este apartado no cambian. El libro del servicio vive en el volumen `rail_data` (`/data`); la imagen runtime crea `/data` con propietario `node` para que el volumen nuevo herede ese propietario y el usuario no administrador pueda escribir.
-
-**Contenido exacto de `services/bank-rail/compose.dev.yaml` (tarea 1.1).**
+**Contenido de `services/bank-rail/compose.dev.yaml` que deja la tarea 1.4** (servicio `dev`). YAML con comillas simples:
 
 ```yaml
 name: fluxone-bank-rail-dev
@@ -108,29 +106,27 @@ name: fluxone-bank-rail-dev
 services:
   dev:
     build:
-      context: ../..
-      dockerfile: services/bank-rail/Dockerfile
+      context: .
+      dockerfile: Dockerfile
       target: dev
     working_dir: /app
     volumes:
-      - ../..:/app
-      - node_modules_root:/app/node_modules
-      - node_modules_bank_rail:/app/services/bank-rail/node_modules
+      - .:/app
+      - node_modules_bank_rail:/app/node_modules
       - npm_cache:/root/.npm
 
 volumes:
-  node_modules_root:
   node_modules_bank_rail:
   npm_cache:
 ```
 
-**Servicio `bank-rail` y volumen `rail_data` (tarea 4.2).** El servicio se añade bajo `services:` y el volumen bajo `volumes:`:
+**Servicio `bank-rail` y volumen `rail_data` (tarea 4.2).** El servicio se añade bajo `services:` y el volumen bajo `volumes:`. Contexto `.`, `dockerfile: Dockerfile`. Environment, puerto `3004:3004`, volumen `rail_data:/data` y healthcheck iguales a los de este bloque:
 
 ```yaml
   bank-rail:
     build:
-      context: ../..
-      dockerfile: services/bank-rail/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     environment:
       PORT: '3004'
       RAIL_OUTCOME_WEIGHTS: ${RAIL_OUTCOME_WEIGHTS:-25,25,25,25}
@@ -153,7 +149,7 @@ volumes:
   rail_data:
 ```
 
-**Contenido exacto de la etapa `dev` de `services/bank-rail/Dockerfile` (tarea 1.1).** Es la primera etapa del archivo:
+**Contenido exacto de la etapa `dev` de `services/bank-rail/Dockerfile` (tarea 1.1).** Es la primera etapa del archivo. La tarea 4.2 no la reescribe si ya coincide:
 
 ```dockerfile
 FROM node:24.22.0-alpine AS dev
@@ -177,8 +173,8 @@ WORKDIR /app
 - Errores con forma `{error:{code,message}}`, mensajes en español.
 - Logs JSON (pino de Fastify) con `reqId` = `X-Request-Id` y redacción de `authorization` y `cookie`.
 - OpenAPI 3.1 en `services/bank-rail/openapi.yaml`.
-- Ambiente 100 % Docker (constitución): compilación, pruebas y ejecución en contenedores con el Compose propio del servicio (`services/bank-rail/compose.dev.yaml`, §2.3).
-- YAML versionado con comillas simples (por `singleQuote: true` de `.prettierrc`) para que `prettier --check .` pase.
+- Ambiente 100 % Docker (constitución): compilación, pruebas y ejecución en contenedores; los comandos corren con cwd `services/bank-rail` y `docker compose -f compose.dev.yaml` (§2.3).
+- YAML versionado con comillas simples (por `singleQuote: true` de `services/bank-rail/.prettierrc`) para que `prettier --check .` pase.
 
 ### 2.6 Riesgos y mitigaciones
 
@@ -193,9 +189,9 @@ WORKDIR /app
 | La respuesta tardía del timeout (15 s por defecto) puede llegar después de que el cliente cierre la conexión | El cliente no ve la respuesta | La operación ya está registrada si el banco la procesó; el cliente consulta con `GET` por la referencia |
 | Ajv de Fastify, por defecto, elimina campos adicionales y convierte tipos (`removeAdditional`, `coerceTypes`) | Campos extra aceptados en silencio y números aceptados como texto | Se desactivan explícitamente en la instancia (§4.2 Logging y Fastify) y el dominio vuelve a validar |
 | Permisos del volumen `rail_data` con el usuario `node` | El servicio no puede escribir el ledger | La imagen crea `/data` con propietario `node` antes de `USER node`; lo verifica AC-RIE-38 |
-| Versiones del stack no verificadas localmente | La instalación o el typecheck fallan al empezar | Primera instalación con `npm install`, luego `npm ci` y `tsc --noEmit` en el contenedor `dev` antes de escribir código de producto (tarea 1.2) |
+| Versiones del stack no verificadas localmente | La instalación o el typecheck fallan al empezar | La instalación reproducible vigente es la tarea 1.4 (`npm install` y luego `npm ci` dentro de `dev`) |
 | Bind mount en Docker Desktop (rendimiento) | Instalaciones y pruebas lentas | `node_modules` y la caché de npm en volúmenes con nombre |
-| Compatibilidad del build en Docker con workspaces | La imagen no compila o no arranca | Verificado por la tarea del Dockerfile (AC-RIE-38) |
+| Build de un paquete autónomo | La imagen no compila o no arranca | El contexto de build es la carpeta de la unidad; lo verifica la tarea 4.2 (AC-RIE-38) |
 
 ### 2.7 Directrices del proyecto
 - `Global`: arquitectura hexagonal en todo servicio, con dominio sin dependencias de framework, DB, broker ni HTTP.
@@ -203,7 +199,7 @@ WORKDIR /app
 - `Global`: dinero en COP, `bigint` de centavos en dominio y `string` en JSON, nunca `float`.
 - `Global`: logs JSON con `correlationId`, nunca secretos, tokens ni contraseñas.
 - `Unidad: services/bank-rail`: tras entregar este spec, el riel no se modifica para hacer pasar casos de otros specs; sus consumidores se adaptan a este contrato.
-- `Unidad: services/bank-rail`: todo comando de compilación, prueba y ejecución de la unidad corre en contenedores con `docker compose -f services/bank-rail/compose.dev.yaml` (servicio `dev`).
+- `Unidad: services/bank-rail`: todo archivo de la unidad (Compose, Dockerfile, lockfile, tsconfig y el toolchain npm) vive en `services/bank-rail/`; el comando de Docker se ejecuta con esa carpeta como directorio de trabajo (`docker compose -f compose.dev.yaml`, servicio `dev`); el contexto de build es esa carpeta; nada de la unidad se crea fuera.
 - `Unidad: services/bank-rail`: se crea el modelo de dominio de este BD en `../domain-model.md` (Contexto Delimitado de Banco simulado).
 
 ### 2.8 Sujeto a actualización futura
@@ -581,12 +577,13 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config;
 
 ## 5. Implementation Target Structure (File Mapping)
 
-Rutas relativas a la raíz del repositorio. Todos los archivos son "Crear", salvo los marcados "Modificar". Esta lista es exacta (ni un archivo más ni uno menos).
+Rutas relativas a la raíz del repositorio. Todos los archivos son "Crear", salvo los marcados "Modificar" o "Restaurar". Esta lista es exacta (ni un archivo más ni uno menos).
 
 **Estructura de `services/bank-rail/`:**
 ```
 services/bank-rail/
-├── package.json, tsconfig.json, tsconfig.build.json, vitest.config.ts, openapi.yaml, Dockerfile, compose.dev.yaml
+├── package.json, package-lock.json, tsconfig.json, tsconfig.build.json, vitest.config.ts, openapi.yaml, Dockerfile, compose.dev.yaml
+├── .npmrc, .dockerignore, eslint.config.js, .prettierrc, .prettierignore
 ├── src/
 │   ├── config.ts, compose.ts, main.ts
 │   ├── domain/ (errors, amount, reference, requests, operation, outcome, reversal-rules)
@@ -601,11 +598,20 @@ services/bank-rail/
 |:---|:---|:---|:---|
 | `services/bank-rail/compose.dev.yaml` | Crear | Compose de desarrollo y pruebas del servicio: servicio `dev` | 1.1 |
 | `services/bank-rail/Dockerfile` | Crear | Etapa `dev` (Node + `git`) | 1.1 |
-| `services/bank-rail/package.json` | Crear | Workspace `@fluxone/bank-rail`: dependencias y scripts | 1.2 |
+| `services/bank-rail/package.json` | Crear | Paquete `@fluxone/bank-rail`: dependencias y scripts | 1.2 |
 | `services/bank-rail/tsconfig.json` | Crear | TypeScript del servicio (typecheck, sin emitir) | 1.2 |
 | `services/bank-rail/tsconfig.build.json` | Crear | Compilación a `dist` | 1.2 |
 | `services/bank-rail/vitest.config.ts` | Crear | Proyectos Vitest `unit` y `acceptance` | 1.2 |
-| `package-lock.json` | Modificar | Lockfile de la raíz regenerado por `npm install` en el contenedor `dev` al añadir el workspace | 1.2 |
+| `services/bank-rail/compose.dev.yaml` | Modificar | Contexto de build = carpeta de la unidad; contenido de §2.3 | 1.4 |
+| `services/bank-rail/package.json` | Modificar | Toolchain propio del paquete y scripts `lint`, `format`, `format:check` | 1.4 |
+| `services/bank-rail/tsconfig.json` | Modificar | `compilerOptions` del paquete; sin extender archivos de fuera | 1.4 |
+| `services/bank-rail/package-lock.json` | Crear | Lockfile del paquete, generado por `npm install` dentro de `dev` | 1.4 |
+| `services/bank-rail/.npmrc` | Crear | Una línea `ignore-scripts=true` | 1.4 |
+| `services/bank-rail/.dockerignore` | Crear | Excluye `node_modules`, `dist`, `coverage` y `*.log`; conserva `package-lock.json` y `.npmrc` | 1.4 |
+| `services/bank-rail/eslint.config.js` | Crear | ESLint del paquete | 1.4 |
+| `services/bank-rail/.prettierrc` | Crear | Prettier del paquete | 1.4 |
+| `services/bank-rail/.prettierignore` | Crear | Exclusiones de Prettier del paquete | 1.4 |
+| `package-lock.json` de la raíz | Restaurar | Único archivo fuera de la unidad; blob `5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d` | 1.4 |
 | `services/bank-rail/src/domain/errors.ts` | Crear | Errores tipados | 1.3 |
 | `services/bank-rail/src/domain/amount.ts` | Crear | `parseAmount`, `formatAmount` | 1.3 |
 | `services/bank-rail/src/domain/reference.ts` | Crear | `isValidReference`, `parseReference`, `parseParty` | 1.3 |
@@ -664,24 +670,82 @@ services/bank-rail/
 
 La tarea 4.3 no crea archivos (verificación global).
 
-**Archivos compartidos con otros specs:** `package-lock.json` (raíz) es el único archivo de raíz compartido que toca este spec (Modificar, tarea 1.2); también lo modifica cualquier otro spec que añada un workspace o dependencias. Este spec no crea ni toca `lefthook.yml`, `.githooks/pre-commit`, `package.json` de la raíz, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc`, `.gitattributes`, `.dockerignore` ni `.gitignore`.
+**Archivos compartidos con otros specs:** este spec no crea ni modifica archivos fuera de `services/bank-rail/`, salvo la restauración del `package-lock.json` de la raíz al blob `5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d` (tarea 1.4, acción Restaurar). No toca `lefthook.yml`, `.githooks/pre-commit`, `package.json` de la raíz, `tsconfig.base.json`, el `eslint.config.js` de la raíz, `.prettierrc` de la raíz, `.prettierignore` de la raíz, `.npmrc` de la raíz, `.gitattributes`, `.dockerignore` de la raíz ni `.gitignore`.
 
-### Configuración del workspace (tarea 1.2)
-- **`services/bank-rail/package.json`:** `name: "@fluxone/bank-rail"`, `private: true`, `type: "module"`; `dependencies`: `fastify` 5.12.7; `devDependencies`: `vitest` 5.0.5 y `tsx` 4.23.15 (versiones exactas, sin `^` ni `~`). Scripts: `build` = `tsc -p tsconfig.build.json`, `dev` = `tsx watch src/main.ts`, `start` = `node dist/main.js`, `typecheck` = `tsc --noEmit -p tsconfig.json`, `test` = `vitest run`.
-- **`services/bank-rail/tsconfig.json`:** `extends: "../../tsconfig.base.json"`, `compilerOptions.noEmit: true`, `include: ["src", "tests", "vitest.config.ts"]`.
-- **`services/bank-rail/tsconfig.build.json`:** `extends: "./tsconfig.json"`, `compilerOptions: {noEmit: false, rootDir: "src", outDir: "dist"}`, `include: ["src"]`, `exclude: ["tests"]`.
+### Configuración del paquete
+Estado vigente tras la tarea 1.4. El paquete `@fluxone/bank-rail` lleva su propio toolchain, con versiones exactas, porque ya no se instala desde la raíz. Los comandos npm van sin `-w` y sin `--workspaces`. El lockfile es `services/bank-rail/package-lock.json`.
+
+- **`services/bank-rail/package.json`:** `name: "@fluxone/bank-rail"`, `private: true`, `type: "module"`. `dependencies`: `fastify` 5.12.7. `devDependencies` (versiones exactas, sin `^` ni `~`): `vitest` 5.0.5, `tsx` 4.23.15, `typescript` 6.0.3, `@types/node` 24.19.2, `eslint` 10.12.0, `@eslint/js` 10.0.1, `typescript-eslint` 8.71.2, `eslint-config-prettier` 10.1.8, `globals` 17.13.0, `prettier` 3.9.10. Scripts: `build` = `tsc -p tsconfig.build.json`, `dev` = `tsx watch src/main.ts`, `start` = `node dist/main.js`, `typecheck` = `tsc --noEmit -p tsconfig.json`, `test` = `vitest run`, `lint` = `eslint . --max-warnings 0`, `format` = `prettier --write .`, `format:check` = `prettier --check .`.
+- **`services/bank-rail/tsconfig.json`:** no extiende ningún archivo de fuera. `compilerOptions`: `target` ES2024, `module` NodeNext, `moduleResolution` NodeNext, `strict` true, `verbatimModuleSyntax` true, `skipLibCheck` true, `types` `["node"]`, `noEmit` true. `include`: `["src", "tests", "vitest.config.ts"]`.
+- **`services/bank-rail/tsconfig.build.json`:** sigue extendiendo `./tsconfig.json` con `noEmit` false, `rootDir` `src`, `outDir` `dist`, `include` `["src"]`, `exclude` `["tests"]`.
 - **`services/bank-rail/vitest.config.ts`:** usa `test.projects` con dos proyectos: `unit` (`include: ['tests/unit/**/*.test.ts']`) y `acceptance` (`include: ['tests/acceptance/**/*.test.ts']`, `testTimeout: 30000`); ambos con `environment: 'node'`, sin `globals` (las pruebas importan de `vitest`) y sin `globalSetup`; ambos corren sus archivos en paralelo (cada prueba usa su propio directorio temporal).
-- **Verificación de la tarea:** `npm install` (regenera `package-lock.json`), luego `npm ci`, `npm run typecheck --workspaces --if-present` y `npm run lint`, todo dentro del contenedor `dev`, antes de escribir código de producto.
+- **`services/bank-rail/.npmrc`** (Crear, tarea 1.4), una línea:
+
+```
+ignore-scripts=true
+```
+
+- **`services/bank-rail/.dockerignore`** (Crear, tarea 1.4). No ignora `package-lock.json` ni `.npmrc`:
+
+```
+node_modules
+dist
+coverage
+*.log
+```
+
+- **`services/bank-rail/.prettierrc`** (Crear, tarea 1.4):
+
+```json
+{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "endOfLine": "lf"
+}
+```
+
+- **`services/bank-rail/.prettierignore`** (Crear, tarea 1.4):
+
+```
+node_modules
+dist
+coverage
+package-lock.json
+```
+
+- **`services/bank-rail/eslint.config.js`** (Crear, tarea 1.4):
+
+```js
+import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
+import prettierConfig from 'eslint-config-prettier';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+
+export default defineConfig(
+  {
+    ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**'],
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  { languageOptions: { globals: globals.node } },
+  prettierConfig,
+);
+```
+
+- **Verificación vigente (tarea 1.4):** `npm install`, `npm ci`, `npm run typecheck`, `npm run lint` y `npm run format:check`, dentro de `dev`, con el directorio de trabajo de Docker = `services/bank-rail`. `npm install` genera `services/bank-rail/package-lock.json`. Tras ese `npm install`, el `package-lock.json` de la raíz sigue igual al blob `5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d` y no contiene `@fluxone/bank-rail`.
 
 ### Soporte de pruebas
 - **`tests/support/fakes.ts` (tarea 2.1):** `SequenceOutcomePicker` (constructor `{outcomes: RailOutcome[], timeoutProcessed?: boolean[]}`; `pick()` y `pickTimeoutProcessed()` consumen sus colas en orden y lanzan un `Error` si se agotan —detecta sorteos de más—; cuenta `pickCalls` y `timeoutCalls`); `FakeDelay` (`wait(ms)` registra `ms` en `waits` y resuelve de inmediato, o queda pendiente hasta `release()` si se creó con `{gated: true}`; `now()` devuelve un instante fijo configurable); `FlakyLedger` (envuelve otro `Ledger`; `failReads` / `failWrites` hacen lanzar `LedgerUnavailableError` en lectura / escritura).
 - **`tests/support/build-test-app.ts` (tarea 3.2):** `buildTestApp(options?: {outcomes?, timeoutProcessed?, weights?, timeoutDelayMs?, ledgerPath?, ledger?, gatedDelay?, env?}): Promise<{app, picker, delay, ledgerPath, logs, ledgerLines(), close()}>`: crea un directorio temporal (`mkdtemp`) para `ledgerPath`, compone la app real con `composeApp` (config por defecto de pruebas, `SequenceOutcomePicker`, `FakeDelay`, un `logStream` que acumula las líneas JSON en `logs`), expone `ledgerLines()` (lee el archivo y devuelve las líneas parseadas) y `close()` (cierra la app y borra el directorio temporal). Permite componer de nuevo sobre el mismo `ledgerPath` para simular un reinicio.
 
 ### Dockerfile (tarea 4.2; descripción)
-La etapa `dev` ya existe (tarea 1.1, contenido en §2.3) y es la primera del archivo; la tarea 4.2 añade, después de ella, las etapas `build` y runtime, de modo que `docker compose -f services/bank-rail/compose.dev.yaml build bank-rail` (servicio `bank-rail` sin `target`) produce la imagen runtime.
-- Etapa `build`: `FROM node:24.22.0-alpine AS build`; `WORKDIR /app`; `COPY . .` (el contexto es la raíz del repositorio, filtrado por `.dockerignore`, de modo que están todos los `package.json` de los workspaces; el `.npmrc` copiado aplica `ignore-scripts`); `RUN npm ci --workspace=services/bank-rail --include-workspace-root`; `RUN npm run build -w services/bank-rail`; `RUN rm -rf node_modules && npm ci --omit=dev --workspace=services/bank-rail --include-workspace-root=false`.
-- Etapa runtime (final): `FROM node:24.22.0-alpine`; `ENV NODE_ENV=production`; `WORKDIR /app`; copia desde `build`: `node_modules`, `package.json`, `services/bank-rail/package.json`, `services/bank-rail/dist`; `RUN mkdir -p /data && chown node:node /data`; `USER node`; `EXPOSE 3004`; `CMD ["node","services/bank-rail/dist/main.js"]`.
-- Contingencia: si aparece el bug de npm "Exit handler never called" en Alpine, usar `node:24.22.0-bookworm-slim` en ambas etapas.
+La etapa `dev` ya existe (tarea 1.1, contenido en §2.3) y es la primera del archivo; la tarea 4.2 no la reescribe si ya coincide. Añade, después de ella, las etapas `build` y runtime. El contexto de build es la carpeta de la unidad. `COPY . .` copia el paquete: aplican el `.dockerignore` de la unidad y el `.npmrc` de la unidad (`ignore-scripts`). Los `RUN` de npm van sin flags `--workspace` ni `-w`. `docker compose -f compose.dev.yaml build bank-rail` (cwd `services/bank-rail`; servicio `bank-rail` sin `target`) produce la imagen runtime. La comprobación de la imagen lista `dist/main.js` y el usuario `node`.
+- Etapa `build`: `FROM node:24.22.0-alpine AS build`; `WORKDIR /app`; `COPY . .`; `RUN npm ci`; `RUN npm run build`; `RUN rm -rf node_modules && npm ci --omit=dev`.
+- Etapa runtime (final): `FROM node:24.22.0-alpine`; `ENV NODE_ENV=production`; `WORKDIR /app`; copia desde `build` `node_modules`, `package.json` y `dist`; `RUN mkdir -p /data && chown node:node /data`; `USER node`; `EXPOSE 3004`; `CMD ["node","dist/main.js"]`.
+- Contingencia Alpine npm "Exit handler never called": `node:24.22.0-bookworm-slim` en las etapas `build` y runtime. Se mantiene.
 
 ### Contrato OpenAPI (tarea 4.1; descripción)
 `services/bank-rail/openapi.yaml` declara `openapi: 3.1.0`, `info`, los cuatro paths de §4.2 con sus métodos, esquemas de petición y de respuesta (`TransferRequest`, `ReversalRequest`, `OperationStatus`, `ErrorResponse`), todos los códigos de estado y `code` de error de la tabla de mensajes y ningún esquema de seguridad. YAML con comillas simples.
@@ -689,7 +753,7 @@ La etapa `dev` ya existe (tarea 1.1, contenido en §2.3) y es la primera del arc
 ### Validación de palabras reservadas (TypeScript/JavaScript)
 Segmentos de ruta revisados: `services`, `bank-rail`, `src`, `domain`, `application`, `ports`, `use-cases`, `adapters`, `inbound`, `outbound`, `http`, `routes`, `ledger`, `random`, `time`, `tests`, `unit`, `acceptance`, `support`. Ninguno colisiona con palabras reservadas de TypeScript/JavaScript. Se usa `inbound`/`outbound` en lugar de `in` porque `in` es palabra reservada.
 
-Todos los archivos son nuevos salvo `package-lock.json`, `app.ts`, `Dockerfile` y `compose.dev.yaml` (modificados por tareas posteriores): no hay directivas de supresión (`eslint-disable`, `@ts-ignore`) preexistentes que revisar.
+Los archivos nuevos de la tarea 1.4 no añaden segmentos de ruta. Sigue siendo válido `inbound`/`outbound`. El lockfile vigente es `services/bank-rail/package-lock.json` (Crear, tarea 1.4); el `package-lock.json` de la raíz solo se restaura (tarea 1.4, blob `5cf2874c88a42f3a10cfe264141da8eaa6fe8d0d`). `app.ts`, `Dockerfile` y `compose.dev.yaml` se modifican por tareas posteriores: no hay directivas de supresión (`eslint-disable`, `@ts-ignore`) preexistentes que revisar.
 
 ### 5.1 Barrido de términos críticos
 sin términos críticos afectados
@@ -720,7 +784,7 @@ Convención de rutas: las que empiezan por `src/` o `tests/` son relativas a `se
 | REQ-7.4 | §4.2 Logging y Fastify, §7.2 | `src/adapters/inbound/http/app.ts`, `src/adapters/inbound/http/routes/transfers-routes.ts`, `src/adapters/inbound/http/routes/reversals-routes.ts` |
 | REQ-7.5 | §2.3, §5 Dockerfile | `services/bank-rail/Dockerfile`, `services/bank-rail/compose.dev.yaml` |
 | REQ-8.1 | §4.2, §5 Contrato OpenAPI | `services/bank-rail/openapi.yaml` |
-| REQ-9.1 | §1, §2.3, §5 Configuración del workspace | `services/bank-rail/compose.dev.yaml`, `services/bank-rail/Dockerfile`, `services/bank-rail/package.json`, `services/bank-rail/tsconfig.json`, `services/bank-rail/tsconfig.build.json`, `services/bank-rail/vitest.config.ts`, `package-lock.json` |
+| REQ-9.1 | §1, §2.3, §5 Configuración del paquete | `services/bank-rail/compose.dev.yaml`, `services/bank-rail/Dockerfile`, `services/bank-rail/package.json`, `services/bank-rail/package-lock.json`, `services/bank-rail/tsconfig.json`, `services/bank-rail/tsconfig.build.json`, `services/bank-rail/vitest.config.ts`, `services/bank-rail/.npmrc`, `services/bank-rail/.dockerignore`, `services/bank-rail/eslint.config.js`, `services/bank-rail/.prettierrc`, `services/bank-rail/.prettierignore` |
 
 ---
 
@@ -750,7 +814,7 @@ Convención de rutas: las que empiezan por `src/` o `tests/` son relativas a `se
 - **Entrada:** esquemas JSON con `additionalProperties: false`, Ajv sin `removeAdditional` ni `coerceTypes`, y revalidación estricta en el dominio (referencia ASCII imprimible de 1 a 255, monto por patrón y > 0).
 - **Logs:** redacción de `authorization`, `cookie` y `set-cookie`; ni cuerpos, ni cuentas, ni montos; solo `reference`, `kind`, `outcome`.
 - **Contenedor:** la imagen runtime corre como `node` (no administrador); el volumen `rail_data` solo contiene el ledger.
-- **Cadena de suministro:** `.npmrc` con `ignore-scripts=true` (aportado por el spec de auth) evita que las instalaciones npm ejecuten scripts de ciclo de vida.
+- **Cadena de suministro:** `services/bank-rail/.npmrc` con `ignore-scripts=true` (tarea 1.4) evita que las instalaciones npm ejecuten scripts de ciclo de vida.
 - **Aislamiento de datos:** no aplica: el riel no tiene tenants ni usuarios; ninguna tabla.
 - **Idempotencia por operación:**
 
@@ -768,7 +832,7 @@ Convención de rutas: las que empiezan por `src/` o `tests/` son relativas a `se
 Convención: el nombre de cada prueba incluye su ID, p. ej. `it('[AC-RIE-01] responde 200 ...')`; imports explícitos de `vitest` (sin globals). Ninguna prueba usa red real, base de datos ni esperas reales (la espera del timeout se simula con `FakeDelay`).
 
 ### 8.1 Unit Tests
-Proyecto `unit`, sin red ni servidor (corre en paralelo). Comando: `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project unit`.
+Proyecto `unit`, sin red ni servidor (corre en paralelo). Directorio de trabajo: `services/bank-rail`. Comando: `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project unit`.
 - **Dominio:** `amount` (`0`, `0.00`, `-1`, `1.234`, `01`, número JSON inválidos; `10` y `10.00` mismo valor; máximo `9999999999999999.99`; 17 dígitos enteros inválidos), `reference` (255 válido, 256 inválido, espacio, no ASCII, vacío), `requests` (campos faltantes, adicionales y de tipo incorrecto), `operation` (`isSamePayload` por tipo de operación y monto por valor; `buildOperation` con el orden de claves; `parseStoredOperation`; `rejectionCode`), `outcome` (`parseOutcomeWeights`: `1,2,3`, `a,b,c,d`, `-1,2,3,4`, `0,0,0,0`, `25, 25,25,25` inválidos; `100,0,0,0` válido; `pickByWeights` en los límites de cada tramo y con peso 0), `reversal-rules` (cada motivo y el orden de evaluación).
 - **Aplicación:** `SerialExecutor` (orden de ejecución, un fallo no bloquea la cola).
 - **Adaptadores:** `JsonlFileLedger` sobre archivo temporal real (crea directorio y archivo; una línea JSON por `append`; recarga tras reabrir; línea final truncada ignorada, truncada del archivo y con advertencia; línea final válida sin `\n` aceptada; otra línea corrupta o referencia repetida rechaza `open` con mensaje que indica el número de línea; fallo de escritura —reemplazar el archivo por un directorio— lanza `LedgerUnavailableError` y no deja la operación visible; escrituras concurrentes producen líneas íntegras); `RandomOutcomePicker` (con `random` inyectado: reparto por pesos, `pickTimeoutProcessed` en el umbral 0.5); `SystemDelay` (`wait` resuelve tras el tiempo indicado, `now` devuelve una fecha).
@@ -778,7 +842,7 @@ Proyecto `unit`, sin red ni servidor (corre en paralelo). Comando: `docker compo
 No hay integraciones externas (sin DB, sin red, sin otros servicios). El adaptador del ledger se prueba contra un archivo temporal real en el proyecto `unit` (§8.1) y la persistencia entre reinicios en el proyecto `acceptance` (§8.3).
 
 ### 8.3 Contract / E2E Tests
-Proyecto `acceptance` (comando: `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project acceptance`); `tests/acceptance/*.test.ts`; `composeApp` real + Fastify `inject`, `SequenceOutcomePicker` determinista, `FakeDelay` y ledger en archivo temporal (`buildTestApp`). Casos que exigen una verificación concreta:
+Proyecto `acceptance` (cwd `services/bank-rail`; comando: `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance`); `tests/acceptance/*.test.ts`; `composeApp` real + Fastify `inject`, `SequenceOutcomePicker` determinista, `FakeDelay` y ledger en archivo temporal (`buildTestApp`). Casos que exigen una verificación concreta:
 - **Registro antes de la espera (AC-RIE-04):** con `FakeDelay` en modo `gated`, mientras el `POST` espera, un `GET` de la misma referencia ya responde 200 y el ledger ya tiene la línea; tras `release()` el `POST` responde 200 y `delay.waits` es `[timeoutDelayMs]`.
 - **Concurrencia (AC-RIE-10):** dos `inject` simultáneos (`Promise.all`) con la misma referencia y payload: `pickCalls === 1`, una sola línea en el ledger y ambas respuestas iguales.
 - **Solo lectura (AC-RIE-14):** `GET` repetido no cambia `pickCalls` ni el contenido del archivo.
@@ -810,11 +874,11 @@ Tabla criterio → archivo de test de los criterios restantes (verificados en `u
 | AC-RIE-24..29 | `tests/unit/adapters/jsonl-file-ledger.test.ts` |
 | AC-RIE-30..32 | `tests/unit/config.test.ts` (AC-RIE-31 además por comando, ver `requirements.md`) |
 
-AC-RIE-26, AC-RIE-38 y AC-RIE-40 se verifican sin pruebas de aceptación: AC-RIE-26 con `jsonl-file-ledger.test.ts`; AC-RIE-38 y AC-RIE-40 con comandos (ver la tabla de trazabilidad de `requirements.md`). Comandos del proyecto:
-- `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail`
-- `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run lint`
-- `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run typecheck --workspaces --if-present`
-- `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run format:check`
+AC-RIE-26, AC-RIE-38 y AC-RIE-40 se verifican sin pruebas de aceptación: AC-RIE-26 con `jsonl-file-ledger.test.ts`; AC-RIE-38 y AC-RIE-40 con comandos (ver la tabla de trazabilidad de `requirements.md`). Comandos del proyecto (cwd `services/bank-rail`):
+- `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test`
+- `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run lint`
+- `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run typecheck`
+- `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run format:check`
 
 ---
 
