@@ -72,7 +72,7 @@
     - `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev sh -c "git init -q /tmp/lh && cp lefthook.yml /tmp/lh/ && cd /tmp/lh && /app/node_modules/.bin/lefthook validate | grep -q 'All good'"` (`lefthook validate` sale con 0 sin validar si no hay repo git; por eso se ejecuta en un repo git temporal y se exige la salida `All good`)
   - **Evidencia:** salida de cada comando. Si `npm ci` o `tsc` fallan por versiones, se reporta (no se cambian versiones sin escalar).
 
-- [ ] **Task 1.5: [P] Esquema de datos: migración y soporte de pruebas con DB real** `[REQ-1.1, REQ-3.4, REQ-6.2, REQ-11.2]` `[DESIGN §3.2, §8.2]`
+- [x] **Task 1.5: [P] Esquema de datos: migración y soporte de pruebas con DB real** `[REQ-1.1, REQ-3.4, REQ-6.2, REQ-11.2]` `[DESIGN §3.2, §8.2]`
   - **Archivos:** `services/auth/migrations/1792022400000_create-auth-tables.sql` (DDL exacto de `design.md § 3.2`), `services/auth/tests/global-setup.ts`, `services/auth/tests/support/db.ts`, `services/auth/tests/integration/migrations.test.ts`, `services/auth/tests/integration/environment.test.ts`
   - **Depende de:** 1.4
   - **Alcance:** migración SQL con el DDL de `design.md § 3.2`, setup global y utilidades de DB real para las pruebas de integración y aceptación. El setup global no inicia contenedores: toma `DATABASE_URL` del entorno (falla con mensaje claro si falta), ejecuta las migraciones con el runner y no crea esquema ni rol (los provee el servicio `postgres` de Compose). `environment.test.ts` verifica el entorno de pruebas.
@@ -248,11 +248,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 6 | 4 | `In Progress` |
+| **Phase 1: Foundation & Domain** | 6 | 5 | `In Progress` |
 | **Phase 2: Core Logic & Application** | 3 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **4** | **25%** |
+| **Total Global** | **16** | **5** | **31%** |
 
 ---
 
