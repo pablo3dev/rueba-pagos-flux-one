@@ -42,7 +42,7 @@
     - limpieza: `docker compose -f services/bank-rail/compose.dev.yaml down -v`
   - **Evidencia:** salida de cada comando.
 
-- [ ] **Task 1.2: Workspace `services/bank-rail` e instalación reproducible** `[REQ-9.1]` `[DESIGN §1, §5]`
+- [x] **Task 1.2: Workspace `services/bank-rail` e instalación reproducible** `[REQ-9.1]` `[DESIGN §1, §5]`
   - **Archivos:** `services/bank-rail/package.json`, `services/bank-rail/tsconfig.json`, `services/bank-rail/tsconfig.build.json`, `services/bank-rail/vitest.config.ts`, `package-lock.json` (modificar: regenerado con `npm install`)
   - **Depende de:** 1.1
   - **Alcance:** crear el workspace `@fluxone/bank-rail` con las versiones exactas de `design.md § 1` y la configuración de `design.md § 5` (sección "Configuración del workspace"), y regenerar `package-lock.json` con `npm install` dentro del contenedor `dev`. `vitest.config.ts` define los proyectos `unit` y `acceptance`. Es la verificación de versiones: instalación reproducible y chequeos base antes de escribir código de producto.
@@ -247,11 +247,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 3 | 1 | `In Progress` |
+| **Phase 1: Foundation & Domain** | 3 | 2 | `In Progress` |
 | **Phase 2: Core Logic & Application** | 2 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **12** | **1** | **8%** |
+| **Total Global** | **12** | **2** | **17%** |
 
 ---
 
