@@ -6,7 +6,7 @@
 
 | Estado global | Última actualización |
 |:---:|:---:|
-| `En progreso` | `2026-10-15` |
+| `Completado` | `2026-10-15` |
 
 ## Objetivo
 
@@ -20,10 +20,10 @@ El servicio se compila, prueba y ejecuta solo con Docker, sin instalar nada en e
 |:---|:---:|
 | Phase 1: Foundation & Domain | `Completado` |
 | Phase 2: Core Logic & Application | `Completado` |
-| Phase 3: Presentation & Endpoints | `En progreso` |
-| Phase 4: Verification & Polish | `Pendiente` |
+| Phase 3: Presentation & Endpoints | `Completado` |
+| Phase 4: Verification & Polish | `Completado` |
 
-**Progreso global:** `54%` (7 de 13 tareas completadas)
+**Progreso global:** `100%` (13 de 13 tareas completadas)
 
 ## Qué puede hacer ya el usuario / Qué falta
 

@@ -161,7 +161,7 @@
     - `[AC-RIE-31]` pesos inválidos (`1,2,3`, `a,b,c,d`, `-1,2,3,4`, `0,0,0,0`, `25, 25,25,25`) lanzan un error cuyo mensaje contiene `RAIL_OUTCOME_WEIGHTS`.
     - `[AC-RIE-32]` `PORT` fuera de 1–65535, `RAIL_TIMEOUT_DELAY_MS` no entero o negativo, `RAIL_LEDGER_PATH` vacío y `LOG_LEVEL` desconocido lanzan un error cuyo mensaje nombra la variable; una variable definida y vacía se valida (no toma el default).
 
-- [ ] **Task 3.2: Raíz de composición, arranque y base HTTP con health, errores y logs** `[REQ-5.4, REQ-6.2, REQ-6.4, REQ-7.1, REQ-7.2, REQ-7.3, REQ-7.4]` `[DESIGN §4.2, §4.3, §7.1]`
+- [x] **Task 3.2: Raíz de composición, arranque y base HTTP con health, errores y logs** `[REQ-5.4, REQ-6.2, REQ-6.4, REQ-7.1, REQ-7.2, REQ-7.3, REQ-7.4]` `[DESIGN §4.2, §4.3, §7.1]`
   - **Archivos:**
     - `services/bank-rail/src/compose.ts`
     - `services/bank-rail/src/main.ts`
@@ -185,7 +185,7 @@
     - `[AC-RIE-36]` `GET /health` con cabecera `Authorization` responde igual que sin ella.
     - `[AC-RIE-31]` `npx tsx src/main.ts` con `RAIL_OUTCOME_WEIGHTS=0,0,0,0` termina con código distinto de 0 (`rc` capturado de `tsx` antes del pipe) y un mensaje que contiene `RAIL_OUTCOME_WEIGHTS` (el comando de aceptación exige ambas condiciones a la vez; verificación por comando de `requirements.md`).
 
-- [ ] **Task 3.3: Transferencias y consulta: rutas, idempotencia y persistencia de extremo a extremo** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-1.6, REQ-1.7, REQ-2.1, REQ-2.2, REQ-2.3, REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-3.5, REQ-5.1, REQ-5.2, REQ-5.4, REQ-5.5, REQ-5.6, REQ-6.4, REQ-7.4]` `[DESIGN §4.1, §4.2, §8.3]`
+- [x] **Task 3.3: Transferencias y consulta: rutas, idempotencia y persistencia de extremo a extremo** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-1.6, REQ-1.7, REQ-2.1, REQ-2.2, REQ-2.3, REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-3.5, REQ-5.1, REQ-5.2, REQ-5.4, REQ-5.5, REQ-5.6, REQ-6.4, REQ-7.4]` `[DESIGN §4.1, §4.2, §8.3]`
   - **Archivos:**
     - `services/bank-rail/src/adapters/inbound/http/routes/transfers-routes.ts` (rutas `POST /rail/transfers` y `GET /rail/transfers/{reference}`)
     - `services/bank-rail/src/adapters/inbound/http/app.ts` (modificar para registrar `transfers-routes`)
@@ -214,7 +214,7 @@
     - `[AC-RIE-29]` con `FlakyLedger` en `failWrites`, `POST` responde 503 `UNAVAILABLE` y, tras `failWrites = false`, el `GET` responde 404.
     - `[AC-RIE-33]` `composition.test.ts` compone el servicio con `OutcomePicker`, `Delay` y `Ledger` sustitutos y las respuestas siguen su control sin esperas reales.
 
-- [ ] **Task 3.4: Reversos: ruta, reglas deterministas y operación de extremo a extremo** `[REQ-4.1, REQ-4.2, REQ-4.3, REQ-4.4, REQ-4.5, REQ-4.6, REQ-4.7, REQ-4.8, REQ-7.2, REQ-7.3, REQ-7.4]` `[DESIGN §4.1, §4.2, §7.1, §8.3]`
+- [x] **Task 3.4: Reversos: ruta, reglas deterministas y operación de extremo a extremo** `[REQ-4.1, REQ-4.2, REQ-4.3, REQ-4.4, REQ-4.5, REQ-4.6, REQ-4.7, REQ-4.8, REQ-7.2, REQ-7.3, REQ-7.4]` `[DESIGN §4.1, §4.2, §7.1, §8.3]`
   - **Archivos:**
     - `services/bank-rail/src/adapters/inbound/http/routes/reversals-routes.ts` (ruta `POST /rail/reversals`)
     - `services/bank-rail/src/adapters/inbound/http/app.ts` (modificar para registrar `reversals-routes`)
@@ -234,14 +234,14 @@
     - `[AC-RIE-37]` los logs capturados contienen `rail.request`, `rail.response`, `rail.outcome_chosen` (con referencia, tipo y resultado sorteado) y `rail.timeout`, con el `reqId` igual a `X-Request-Id` (o generado si falta), y NO contienen las cabeceras `Authorization` ni `Cookie`, ni cuentas ni montos.
 
 ### Phase 4: Verification, Testing & Polish
-- [ ] **Task 4.1: [P] Contrato OpenAPI 3.1** `[REQ-8.1]` `[DESIGN §4.2, §5, §8.3]`
+- [x] **Task 4.1: [P] Contrato OpenAPI 3.1** `[REQ-8.1]` `[DESIGN §4.2, §5, §8.3]`
   - **Archivos:** `services/bank-rail/openapi.yaml`, `services/bank-rail/tests/acceptance/openapi.test.ts`
   - **Depende de:** 3.4
   - **Alcance:** documentar el contrato HTTP del servicio en OpenAPI 3.1 según `design.md § 5` (sección "Contrato OpenAPI") y verificarlo con una prueba.
   - **Criterio de aceptación:** `docker compose -f compose.dev.yaml run --rm --no-deps dev npm run test -- --project acceptance tests/acceptance/openapi.test.ts`
   - **Evidencia:** `[AC-RIE-39]` el archivo declara `openapi: 3.1.x`, describe los cuatro paths de `design.md § 4.2` con sus métodos, los esquemas `TransferRequest`, `ReversalRequest`, `OperationStatus` y `ErrorResponse`, todos los códigos de estado y `code` de error de la tabla de mensajes, y ningún esquema de seguridad.
 
-- [ ] **Task 4.2: [P] Imagen de contenedor del servicio y ejecución en Compose** `[REQ-7.5, REQ-9.1]` `[DESIGN §2.3, §5]`
+- [x] **Task 4.2: [P] Imagen de contenedor del servicio y ejecución en Compose** `[REQ-7.5, REQ-9.1]` `[DESIGN §2.3, §5]`
   - **Archivos:**
     - `services/bank-rail/Dockerfile` (modificar: añadir las etapas `build` y runtime tras la etapa `dev` de 1.1, según `design.md § 5`)
     - `services/bank-rail/compose.dev.yaml` (modificar: añadir el servicio `bank-rail` y el volumen `rail_data`, con el contenido de `design.md § 2.3`)
@@ -258,7 +258,7 @@
     - limpieza: `docker compose -f compose.dev.yaml down -v`
   - **Evidencia (comportamiento crítico: persistencia en el contenedor):** `[AC-RIE-38]` salida de cada comando: el `POST` responde 200 con los pesos `100,0,0,0` y, tras recrear el contenedor sin borrar volúmenes, el `GET` de `PERSIST-1` responde 200.
 
-- [ ] **Task 4.3: Verificación global del spec** `[REQ-9.1]` `[DESIGN §5, §8.3]`
+- [x] **Task 4.3: Verificación global del spec** `[REQ-9.1]` `[DESIGN §5, §8.3]`
   - **Archivos:** ninguno (solo verificación).
   - **Depende de:** 4.1, 4.2
   - **Alcance:** verificación del paquete de la unidad dentro de `dev` y confirmación de la cobertura de los criterios de aceptación AC-RIE-01..40. Directorio de trabajo `services/bank-rail`.
@@ -280,9 +280,9 @@
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 4 | 4 | `Done` |
 | **Phase 2: Core Logic & Application** | 2 | 2 | `Done` |
-| **Phase 3: Presentation & Endpoints** | 4 | 1 | `In Progress` |
-| **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **13** | **7** | **54%** |
+| **Phase 3: Presentation & Endpoints** | 4 | 4 | `Done` |
+| **Phase 4: Verification & Polish** | 3 | 3 | `Done` |
+| **Total Global** | **13** | **13** | **100%** |
 
 ---
 
