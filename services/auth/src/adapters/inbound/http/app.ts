@@ -12,6 +12,7 @@ import type { RefreshSession } from '../../../application/use-cases/refresh-sess
 import type { RegisterUser } from '../../../application/use-cases/register-user.js';
 import { registerErrorHandlers } from './error-handler.js';
 import { registerRateLimit } from './rate-limit.js';
+import { authRoutes } from './routes/auth-routes.js';
 import { healthRoutes } from './routes/health-routes.js';
 import { jwksRoutes } from './routes/jwks-routes.js';
 
@@ -35,6 +36,8 @@ export async function buildApp(deps: BuildAppDeps): Promise<FastifyInstance> {
   const { config, useCases, isDatabaseReady, logStream } = deps;
 
   const app = Fastify({
+    // Por defecto Ajv de Fastify elimina campos extra y convierte tipos; aquí se rechazan (400).
+    ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
     logger: {
       level: config.logLevel,
       redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
@@ -51,6 +54,11 @@ export async function buildApp(deps: BuildAppDeps): Promise<FastifyInstance> {
   await registerRateLimit(app);
   registerErrorHandlers(app);
 
+  await app.register(authRoutes, {
+    config,
+    registerUser: useCases.registerUser,
+    loginUser: useCases.loginUser,
+  });
   await app.register(jwksRoutes, { getJwks: useCases.getJwks });
   await app.register(healthRoutes, { isDatabaseReady });
 

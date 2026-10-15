@@ -1,4 +1,4 @@
-// adapter: in â€” Fastify (tabla error â†’ status/code con formato {error:{code,message}})
+// adapter: in — Fastify (tabla error → status/code con formato {error:{code,message}})
 import type { FastifyError, FastifyInstance } from 'fastify';
 import {
   AccessTokenInvalidError,
@@ -21,21 +21,21 @@ type ErrorCode =
   | 'INTERNAL_ERROR';
 
 const ERRORS: Record<ErrorCode, { status: number; message: string }> = {
-  VALIDATION_ERROR: { status: 400, message: 'Solicitud invÃ¡lida' },
-  EMAIL_TAKEN: { status: 409, message: 'El correo ya estÃ¡ registrado.' },
-  INVALID_CREDENTIALS: { status: 401, message: 'Correo o contraseÃ±a incorrectos.' },
+  VALIDATION_ERROR: { status: 400, message: 'Solicitud inválida' },
+  EMAIL_TAKEN: { status: 409, message: 'El correo ya está registrado.' },
+  INVALID_CREDENTIALS: { status: 401, message: 'Correo o contraseña incorrectos.' },
   RATE_LIMITED: { status: 429, message: 'Demasiados intentos. Intenta de nuevo en un minuto.' },
-  REFRESH_TOKEN_INVALID: { status: 401, message: 'La sesiÃ³n no es vÃ¡lida o expirÃ³.' },
+  REFRESH_TOKEN_INVALID: { status: 401, message: 'La sesión no es válida o expiró.' },
   REFRESH_TOKEN_REUSED: {
     status: 401,
-    message: 'La sesiÃ³n fue revocada por seguridad. Inicia sesiÃ³n de nuevo.',
+    message: 'La sesión fue revocada por seguridad. Inicia sesión de nuevo.',
   },
-  UNAUTHORIZED: { status: 401, message: 'Token de acceso ausente o invÃ¡lido.' },
+  UNAUTHORIZED: { status: 401, message: 'Token de acceso ausente o inválido.' },
   NOT_FOUND: { status: 404, message: 'Recurso no encontrado.' },
   INTERNAL_ERROR: { status: 500, message: 'Error interno del servidor.' },
 };
 
-// Lo lanza el errorResponseBuilder de @fastify/rate-limit (la librerÃ­a hace `throw` de su resultado).
+// Lo lanza el errorResponseBuilder de @fastify/rate-limit (la librería hace `throw` de su resultado).
 export class RateLimitedError extends Error {
   readonly statusCode = 429;
 }
@@ -54,7 +54,7 @@ function classify(error: FastifyError): { code: ErrorCode; detail?: string } {
     const where = error.validationContext ?? 'body';
     return {
       code: 'VALIDATION_ERROR',
-      detail: first ? `${where}${first.instancePath} ${first.message ?? 'no es vÃ¡lido'}` : where,
+      detail: first ? `${where}${first.instancePath} ${first.message ?? 'no es válido'}` : where,
     };
   }
   if (error instanceof ValidationError) return { code: 'VALIDATION_ERROR', detail: error.message };
@@ -64,7 +64,7 @@ function classify(error: FastifyError): { code: ErrorCode; detail?: string } {
   if (error instanceof RefreshTokenReusedError) return { code: 'REFRESH_TOKEN_REUSED' };
   if (error instanceof AccessTokenInvalidError) return { code: 'UNAUTHORIZED' };
   if (error instanceof RateLimitedError) return { code: 'RATE_LIMITED' };
-  // Cuerpo malformado (JSON invÃ¡lido, cuerpo vacÃ­o): error del cliente que Fastify marca con 400.
+  // Cuerpo malformado (JSON inválido, cuerpo vacío): error del cliente que Fastify marca con 400.
   if (error.statusCode === 400) {
     return { code: 'VALIDATION_ERROR', detail: 'cuerpo de la solicitud malformado' };
   }

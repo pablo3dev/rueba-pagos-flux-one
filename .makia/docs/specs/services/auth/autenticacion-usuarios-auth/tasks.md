@@ -172,7 +172,7 @@
     - `[AC-AUT-20]` compone la app dos veces sobre la misma DB y verifica mismo `kid` y que un token emitido antes del segundo arranque verifica contra el JWKS del segundo.
       - Evidencia observada (2026-10-15): `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db --reporter=verbose tests/acceptance/jwks.test.ts` → exit 0, 1 archivo y 2 pruebas pasan contra PostgreSQL 18.6 de Compose: `✓ [AC-AUT-20] reutiliza el mismo par de llaves tras reiniciar y verifica tokens previos (283 ms)` (mismo `kid` en el JWKS de ambos arranques, 1 sola fila en `auth_schema.signing_keys`, token previo verificado con `jose` contra el JWKS del segundo arranque) y `✓ [AC-AUT-19] publica solo la llave pública Ed25519 vigente, sin material privado (523 ms)`.
 
-- [ ] **Task 3.2: Registro e inicio de sesión** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-2.1, REQ-2.2, REQ-2.3, REQ-2.4, REQ-2.5, REQ-7.1, REQ-8.3]` `[DESIGN §4.2, §7.2]`
+- [x] **Task 3.2: Registro e inicio de sesión** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-2.1, REQ-2.2, REQ-2.3, REQ-2.4, REQ-2.5, REQ-7.1, REQ-8.3]` `[DESIGN §4.2, §7.2]`
   - **Archivos:** `services/auth/src/adapters/inbound/http/routes/auth-routes.ts` (rutas `POST /auth/register` y `POST /auth/login`), `services/auth/src/adapters/inbound/http/app.ts` (modificar para registrarlas), `services/auth/tests/acceptance/register.test.ts`, `services/auth/tests/acceptance/login.test.ts`, `services/auth/tests/acceptance/seed.test.ts`
   - **Depende de:** 3.1
   - **Alcance:** exponer `POST /auth/register` y `POST /auth/login` con validación, límites de tasa por IP y cookie de refresh, y verificar la semilla de usuarios demo.
@@ -184,6 +184,7 @@
     - `[AC-AUT-07]` 401 sin cookie y mismo mensaje para email inexistente y contraseña errónea.
     - `[AC-AUT-09]` el token verifica con el JWKS publicado.
     - `[AC-AUT-21]` arrancar la app dos veces sobre la misma DB deja exactamente 3 usuarios demo con los ids fijos (sin duplicar ni modificar a los existentes) y alice, bob y carol inician sesión con `DEMO_USERS_PASSWORD`.
+    - Evidencia observada (2026-10-15): `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db --reporter=verbose tests/acceptance/register.test.ts tests/acceptance/login.test.ts tests/acceptance/seed.test.ts` → 3 archivos y 15 pruebas pasan contra PostgreSQL 18.6 de Compose, entre ellas: `✓ [AC-AUT-05] el 11.º registro por IP recibe 429 RATE_LIMITED y no se procesa`; `✓ [AC-AUT-08] el 6.º login por IP recibe 429 RATE_LIMITED e IP distintas tienen límites independientes`; `✓ [AC-AUT-06] un login válido responde 200 con la sesión y la cookie refresh_token con sus atributos` (HttpOnly, SameSite=Strict, Path=/api/auth, Max-Age=604800); `✓ [AC-AUT-07] email inexistente y contraseña errónea dan 401 con el mismo mensaje y sin cookie`; `✓ [AC-AUT-09] el access token EdDSA de 15 min verifica con el JWKS publicado`; `✓ [AC-AUT-21] arrancar dos veces deja exactamente 3 usuarios demo con ids fijos, sin modificar a los existentes`.
 
 - [ ] **Task 3.3: Renovación, cierre de sesión y perfil** `[REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-4.1, REQ-4.2, REQ-5.1, REQ-5.2, REQ-8.3]` `[DESIGN §4.1, §4.2]`
   - **Archivos:** `services/auth/src/adapters/inbound/http/routes/auth-routes.ts` (modificar: rutas `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`), `services/auth/tests/acceptance/refresh.test.ts`, `services/auth/tests/acceptance/logout.test.ts`, `services/auth/tests/acceptance/profile.test.ts`
@@ -251,9 +252,9 @@
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
-| **Phase 3: Presentation & Endpoints** | 4 | 1 | `In Progress` |
+| **Phase 3: Presentation & Endpoints** | 4 | 2 | `In Progress` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **10** | **62%** |
+| **Total Global** | **16** | **11** | **69%** |
 
 ---
 
