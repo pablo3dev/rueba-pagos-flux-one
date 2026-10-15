@@ -91,4 +91,20 @@ No hay push directo a `main`.
 
 - El modelo de dominio de esta unidad vive en `.makia/docs/specs/services/auth/domain-model.md` (Contexto Delimitado de Identidad).
 
+## Unidad: services/bank-rail
+
+Ámbito: solo `services/bank-rail`.
+
+### Contrato congelado
+
+- Tras entregar este spec, el riel no se modifica para hacer pasar casos de otros specs; sus consumidores se adaptan a este contrato.
+
+### Ejecución en contenedores
+
+- Todo comando de compilación, prueba y ejecución de la unidad corre en contenedores con `docker compose -f services/bank-rail/compose.dev.yaml` (servicio `dev`).
+
+### Modelo de dominio
+
+- El modelo de dominio de esta unidad vive en `.makia/docs/specs/services/bank-rail/domain-model.md` (Contexto Delimitado de Banco simulado).
+
 > **Seguridad:** ningún token, credencial o valor sensible se escribe aquí en texto plano — siempre `${NOMBRE_VARIABLE}` resuelto desde el entorno. Este archivo vive en `.makia/config/constitution.md` de cada proyecto, se versiona, y nunca se genera con contenido inventado por MakIA.
