@@ -81,7 +81,7 @@
     - `[AC-RIE-28]` `parseStoredOperation` rechaza campos faltantes, `reason` en una operación aceptada e incoherencia entre `kind` y sus campos.
 
 ### Phase 2: Core Logic & Application Layer
-- [ ] **Task 2.1: Puertos, flujo de operación, `SerialExecutor` y casos de uso** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-2.1, REQ-2.2, REQ-2.3, REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-4.1, REQ-4.2, REQ-4.3, REQ-4.4, REQ-4.5, REQ-4.6, REQ-4.7, REQ-4.8, REQ-6.4]` `[DESIGN §4.1]`
+- [x] **Task 2.1: Puertos, flujo de operación, `SerialExecutor` y casos de uso** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-2.1, REQ-2.2, REQ-2.3, REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-4.1, REQ-4.2, REQ-4.3, REQ-4.4, REQ-4.5, REQ-4.6, REQ-4.7, REQ-4.8, REQ-6.4]` `[DESIGN §4.1]`
   - **Archivos:**
     - `services/bank-rail/src/application/ports/ledger.ts`
     - `services/bank-rail/src/application/ports/outcome-picker.ts`
@@ -248,10 +248,10 @@
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 3 | 3 | `Done` |
-| **Phase 2: Core Logic & Application** | 2 | 0 | `Pending` |
+| **Phase 2: Core Logic & Application** | 2 | 1 | `In Progress` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **12** | **3** | **25%** |
+| **Total Global** | **12** | **4** | **33%** |
 
 ---
 
