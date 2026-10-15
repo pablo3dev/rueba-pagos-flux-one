@@ -1,0 +1,89 @@
+Project fluxone_payment_payments {
+  database_type: 'PostgreSQL'
+  Note: '''
+    PostgreSQL 18.6.
+    El servicio Pagos usa un único rol (payment_svc) con acceso exclusivo a payment_schema.
+    No existen FK entre esquemas. payment_schema.accounts.owner_user_id, payment_schema.transfers.owner_user_id y payment_schema.idempotency_keys.user_id referencian al usuario solo lógicamente mediante el claim sub del JWT.
+    La tabla pgmigrations es administrada por node-pg-migrate 9 en el esquema y no se modela.
+    Todos los importes usan numeric(18,2) y la única moneda admitida es COP.
+  '''
+}
+
+Table payment_schema.accounts {
+  id varchar(20) [pk]
+  owner_user_id uuid [not null]
+  currency char(3) [not null, default: 'COP']
+  balance numeric(18,2) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    owner_user_id
+  }
+
+  Note: '''
+    ALTER TABLE payment_schema.accounts ADD CONSTRAINT accounts_id_chk CHECK (id ~ '^ACC-[0-9]{3,}$');
+    ALTER TABLE payment_schema.accounts ADD CONSTRAINT accounts_currency_chk CHECK (currency = 'COP');
+    ALTER TABLE payment_schema.accounts ADD CONSTRAINT accounts_balance_chk CHECK (balance >= 0);
+    Semilla insertada por la migración con INSERT ... ON CONFLICT DO NOTHING: ACC-001 pertenece a alice (11111111-1111-4111-8111-111111111111) y tiene 1000000.00 COP; ACC-002 pertenece a bob (22222222-2222-4222-8222-222222222222) y tiene 500000.00 COP; ACC-003 pertenece a carol (33333333-3333-4333-8333-333333333333) y tiene 0.00 COP.
+  '''
+}
+
+Table payment_schema.transfers {
+  id uuid [pk]
+  owner_user_id uuid [not null]
+  type varchar(10) [not null]
+  from_account_id varchar(20) [not null]
+  to_account_id varchar(20) [not null]
+  amount numeric(18,2) [not null]
+  currency char(3) [not null, default: 'COP']
+  status varchar(16) [not null]
+  failure_reason varchar(40)
+  correlation_id varchar(64)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  completed_at timestamptz
+
+  indexes {
+    (from_account_id, `created_at DESC`, `id DESC`)
+    (to_account_id, `created_at DESC`, `id DESC`)
+  }
+
+  Note: '''
+    owner_user_id es el iniciador y dueño de la cuenta origen. Los dos índices sirven el historial paginado por cursor keyset (created_at DESC, id DESC) para el dueño de la cuenta origen y para el dueño de la cuenta destino.
+    ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_type_chk CHECK (type = 'INTERNAL');
+    ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_amount_chk CHECK (amount > 0);
+    ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_currency_chk CHECK (currency = 'COP');
+    ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_status_chk CHECK (status IN ('COMPLETED','FAILED'));
+    ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_failure_reason_chk CHECK (failure_reason IS NULL OR failure_reason = 'INSUFFICIENT_FUNDS');
+    ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_distinct_chk CHECK (from_account_id <> to_account_id);
+    ALTER TABLE payment_schema.transfers ADD CONSTRAINT transfers_failure_chk CHECK ((status = 'FAILED') = (failure_reason IS NOT NULL));
+    Una transferencia INTERNAL nace COMPLETED, o FAILED con failure_reason INSUFFICIENT_FUNDS sin mover saldos, en una sola transacción.
+  '''
+}
+
+Table payment_schema.idempotency_keys {
+  user_id uuid [not null]
+  operation varchar(80) [not null]
+  idempotency_key varchar(255) [not null]
+  request_hash char(64) [not null]
+  status varchar(16) [not null]
+  response_status smallint
+  response_body jsonb
+  resource_id uuid
+  created_at timestamptz [not null, default: `now()`]
+  completed_at timestamptz
+
+  indexes {
+    (user_id, operation, idempotency_key) [pk]
+  }
+
+  Note: '''
+    operation admite CREATE_TRANSFER. request_hash es el SHA-256 hexadecimal del JSON canónico del body con claves ordenadas concatenado con operation.
+    ALTER TABLE payment_schema.idempotency_keys ADD CONSTRAINT idempotency_keys_status_chk CHECK (status IN ('IN_PROGRESS','COMPLETED'));
+    Se inserta con INSERT ... ON CONFLICT DO NOTHING dentro de la MISMA transacción de negocio. IN_PROGRESS nunca queda visible después del commit. No existe TTL ni purga.
+  '''
+}
+
+Ref: payment_schema.transfers.from_account_id > payment_schema.accounts.id
+Ref: payment_schema.transfers.to_account_id > payment_schema.accounts.id

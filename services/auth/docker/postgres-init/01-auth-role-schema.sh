@@ -1,0 +1,11 @@
+#!/bin/sh
+# Rol y esquema de auth para desarrollo y pruebas en Compose (solo este servicio).
+set -eu
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<EOSQL
+REVOKE CREATE, USAGE ON SCHEMA public FROM PUBLIC;
+REVOKE CONNECT ON DATABASE ${POSTGRES_DB} FROM PUBLIC;
+CREATE ROLE auth_svc LOGIN PASSWORD '${AUTH_DB_PASSWORD}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO auth_svc;
+CREATE SCHEMA auth_schema AUTHORIZATION auth_svc;
+ALTER ROLE auth_svc IN DATABASE ${POSTGRES_DB} SET search_path = auth_schema;
+EOSQL

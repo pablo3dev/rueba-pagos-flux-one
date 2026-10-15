@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+package-lock.json
+.makia
+.claude
+.cursor
+.agents
+CLAUDE.md
+AGENTS.md

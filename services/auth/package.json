@@ -1,0 +1,26 @@
+{
+  "name": "@fluxone/auth",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/cookie": "11.1.3",
+    "@fastify/rate-limit": "11.2.1",
+    "@node-rs/argon2": "2.2.2",
+    "fastify": "5.12.7",
+    "jose": "6.2.12",
+    "node-pg-migrate": "9.0.0",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15",
+    "vitest": "5.0.5"
+  }
+}
