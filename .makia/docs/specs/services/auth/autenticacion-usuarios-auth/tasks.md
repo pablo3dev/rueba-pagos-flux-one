@@ -232,7 +232,7 @@
     - limpieza: `docker compose -f services/auth/compose.dev.yaml down -v`
   - **Evidencia:** salida de cada comando.
 
-- [ ] **Task 4.3: Verificación global del spec** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-10.4, REQ-11.1]` `[DESIGN §5, §8.3]`
+- [x] **Task 4.3: Verificación global del spec** `[REQ-10.1, REQ-10.2, REQ-10.3, REQ-10.4, REQ-11.1]` `[DESIGN §5, §8.3]`
   - **Archivos:** ninguno nuevo.
   - **Depende de:** 4.1, 4.2
   - **Alcance:** ejecutar la verificación completa del monorepo dentro del contenedor `dev` y confirmar la cobertura de los criterios de aceptación.
@@ -246,6 +246,7 @@
     - `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');if(!fs.readFileSync('.gitattributes','utf8').includes('Dockerfile* text eol=lf')||fs.readFileSync('services/auth/docker/postgres-init/01-auth-role-schema.sh','utf8').includes('\r'))process.exit(1)"`
     - `docker compose -f services/auth/compose.dev.yaml down -v`
   - **Evidencia:** salida de cada comando y recuento de pruebas que incluyen `[AC-AUT-` (deben aparecer los AC-AUT-01 a AC-AUT-24, AC-AUT-26 y AC-AUT-32).
+    - Evidencia observada (2026-10-15), vía `makia verify --run` (8 comandos del criterio de aceptación, todos PASS, código de salida 0): `npm ci`, `npm run lint`, `npm run format:check`, `npm run typecheck --workspaces --if-present`, `npm run test --workspaces --if-present` (suites `unit` y `db` verdes contra PostgreSQL 18.6 de Compose), `lefthook validate` con `All good`, comprobación de LF en `.gitattributes` y en el script de init de Postgres, y `down -v`. Recuento: las pruebas de `services/auth/tests` incluyen 137 casos con ID `[AC-AUT-NN]` en su nombre y cubren los 26 IDs exigidos: AC-AUT-01 a AC-AUT-24, AC-AUT-26 y AC-AUT-32 (0 faltantes).
 
 ---
 
@@ -255,8 +256,8 @@
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
 | **Phase 3: Presentation & Endpoints** | 4 | 4 | `Done` |
-| **Phase 4: Verification & Polish** | 3 | 2 | `In Progress` |
-| **Total Global** | **16** | **15** | **94%** |
+| **Phase 4: Verification & Polish** | 3 | 3 | `Done` |
+| **Total Global** | **16** | **16** | **100%** |
 
 ---
 
