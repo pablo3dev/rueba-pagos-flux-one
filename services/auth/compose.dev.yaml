@@ -21,16 +21,15 @@ services:
 
   dev:
     build:
-      context: ../..
-      dockerfile: services/auth/Dockerfile
+      context: .
+      dockerfile: Dockerfile
       target: dev
     working_dir: /app
     environment:
       DATABASE_URL: postgres://auth_svc:${AUTH_DB_PASSWORD:-auth_dev_pw}@postgres:5432/fluxone
     volumes:
-      - ../..:/app
-      - node_modules_root:/app/node_modules
-      - node_modules_auth:/app/services/auth/node_modules
+      - .:/app
+      - node_modules:/app/node_modules
       - npm_cache:/root/.npm
     depends_on:
       postgres:
@@ -38,8 +37,8 @@ services:
 
   auth:
     build:
-      context: ../..
-      dockerfile: services/auth/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     environment:
       PORT: '3001'
       DATABASE_URL: postgres://auth_svc:${AUTH_DB_PASSWORD:-auth_dev_pw}@postgres:5432/fluxone
@@ -59,6 +58,5 @@ services:
       start_period: 10s
 
 volumes:
-  node_modules_root:
-  node_modules_auth:
+  node_modules:
   npm_cache:

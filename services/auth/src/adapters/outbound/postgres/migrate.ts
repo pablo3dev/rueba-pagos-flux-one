@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { runner } from 'node-pg-migrate';
 
-// `../../../../migrations` resuelve a services/auth/migrations desde src/ y desde dist/.
+// `../../../../migrations` resuelve a migrations/ en la raíz de la unidad desde src/ y desde dist/.
 export async function runMigrations(databaseUrl: string): Promise<void> {
   await runner({
     databaseUrl,

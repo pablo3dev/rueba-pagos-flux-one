@@ -4,4 +4,6 @@ if [ ! -d .git ]; then
   echo 'pre-commit: .git no es un directorio (git worktree); verificación omitida' >&2
   exit 0
 fi
-exec docker compose -f services/auth/compose.dev.yaml run --rm -T --no-deps dev npx lefthook run pre-commit --no-auto-install
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT/services/auth" || exit 1
+exec docker compose -f compose.dev.yaml run --rm -T --no-deps dev npx lefthook run pre-commit --no-auto-install

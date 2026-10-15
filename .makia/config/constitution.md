@@ -90,7 +90,7 @@ Nada de la unidad se crea fuera de su carpeta.
 
 ### Ejecución en contenedores
 
-- Todo comando de compilación, prueba y ejecución corre en contenedores con `docker compose -f services/auth/compose.dev.yaml` (servicio `dev`).
+- Todo comando de compilación, prueba y ejecución corre en contenedores con `docker compose -f compose.dev.yaml` (servicio `dev`), con directorio de trabajo `services/auth`.
 - La DB de pruebas es el servicio `postgres` de ese Compose.
 
 ### Modelo de dominio

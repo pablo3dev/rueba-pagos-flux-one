@@ -6,15 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: [
-      '**/dist/**',
-      '**/node_modules/**',
-      '**/coverage/**',
-      '.makia/**',
-      '.claude/**',
-      '.cursor/**',
-      '.agents/**',
-    ],
+    ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
