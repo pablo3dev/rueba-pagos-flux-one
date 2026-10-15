@@ -151,7 +151,7 @@
   - **Evidencia:** `rotate` concurrente con `Promise.all` sobre el mismo token produce exactamente un `ROTATED` y un `REUSED` y deja revocada toda la familia; `insertIfNoActive` concurrente deja una sola llave activa; `insert` de email duplicado lanza `EmailAlreadyRegisteredError`.
 
 ### Phase 3: Presentation, Endpoints & Integration
-- [ ] **Task 3.1: Configuración, raíz de composición y base HTTP con JWKS y health** `[REQ-6.1, REQ-6.2, REQ-7.1, REQ-8.1, REQ-8.2]` `[DESIGN §4.2, §4.3]`
+- [x] **Task 3.1: Configuración, raíz de composición y base HTTP con JWKS y health** `[REQ-6.1, REQ-6.2, REQ-7.1, REQ-8.1, REQ-8.2]` `[DESIGN §4.2, §4.3]`
   - **Archivos:**
     - `services/auth/src/config.ts`
     - `services/auth/src/compose.ts`
@@ -170,6 +170,7 @@
   - **Criterio de aceptación:** `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db tests/acceptance/jwks.test.ts` y `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev npm run typecheck -w services/auth`.
   - **Evidencia (comportamiento crítico):**
     - `[AC-AUT-20]` compone la app dos veces sobre la misma DB y verifica mismo `kid` y que un token emitido antes del segundo arranque verifica contra el JWKS del segundo.
+      - Evidencia observada (2026-10-15): `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db --reporter=verbose tests/acceptance/jwks.test.ts` → exit 0, 1 archivo y 2 pruebas pasan contra PostgreSQL 18.6 de Compose: `✓ [AC-AUT-20] reutiliza el mismo par de llaves tras reiniciar y verifica tokens previos (283 ms)` (mismo `kid` en el JWKS de ambos arranques, 1 sola fila en `auth_schema.signing_keys`, token previo verificado con `jose` contra el JWKS del segundo arranque) y `✓ [AC-AUT-19] publica solo la llave pública Ed25519 vigente, sin material privado (523 ms)`.
 
 - [ ] **Task 3.2: Registro e inicio de sesión** `[REQ-1.1, REQ-1.2, REQ-1.3, REQ-1.4, REQ-1.5, REQ-2.1, REQ-2.2, REQ-2.3, REQ-2.4, REQ-2.5, REQ-7.1, REQ-8.3]` `[DESIGN §4.2, §7.2]`
   - **Archivos:** `services/auth/src/adapters/inbound/http/routes/auth-routes.ts` (rutas `POST /auth/register` y `POST /auth/login`), `services/auth/src/adapters/inbound/http/app.ts` (modificar para registrarlas), `services/auth/tests/acceptance/register.test.ts`, `services/auth/tests/acceptance/login.test.ts`, `services/auth/tests/acceptance/seed.test.ts`
@@ -250,9 +251,9 @@
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
-| **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
+| **Phase 3: Presentation & Endpoints** | 4 | 1 | `In Progress` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **9** | **56%** |
+| **Total Global** | **16** | **10** | **62%** |
 
 ---
 
