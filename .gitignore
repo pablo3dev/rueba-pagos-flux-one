@@ -7,3 +7,10 @@
 # .makia/worktrees/<spec-slug>/ son árboles de trabajo efímeros de `git worktree`
 # (ver session.md RN-08): se crean y eliminan dentro del proyecto, nunca se versionan.
 .makia/worktrees/
+
+# Proyecto
+node_modules/
+dist/
+coverage/
+.env
+*.log

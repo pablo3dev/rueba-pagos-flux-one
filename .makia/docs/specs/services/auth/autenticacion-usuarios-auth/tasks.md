@@ -50,7 +50,7 @@
   - **Alcance:** crear `lefthook.yml` en la raíz con el contenido exacto de `design.md § 5` (YAML con comillas simples, por `singleQuote` de `.prettierrc`) y el script versionado `.githooks/pre-commit`, que ejecuta `docker compose -f services/auth/compose.dev.yaml run --rm -T --no-deps dev npx lefthook run pre-commit --no-auto-install` y se omite con aviso si `.git` no es un directorio (worktree). El archivo se marca ejecutable en el índice con `git update-index --add --chmod=+x .githooks/pre-commit` al preparar el commit de la tarea. El desarrollador activa el hook con `git config core.hooksPath .githooks` (paso manual, fuera de los criterios).
   - **Criterio de aceptación:** `docker compose -f services/auth/compose.dev.yaml run --rm --no-deps dev node -e "const fs=require('node:fs');const f=fs.readFileSync('lefthook.yml','utf8');for(const k of ['parallel: true','eslint:','prettier:','typecheck:','stage_fixed: true','npm run typecheck --workspaces --if-present'])if(!f.includes(k))process.exit(1);if(!fs.readFileSync('.githooks/pre-commit','utf8').includes('lefthook run pre-commit'))process.exit(1)"` termina con código 0 (la validación ejecutable de lefthook ocurre en la Tarea 1.4).
 
-- [ ] **Task 1.3: Tooling raíz del monorepo** `[REQ-10.1, REQ-10.2]` `[DESIGN §5]`
+- [x] **Task 1.3: Tooling raíz del monorepo** `[REQ-10.1, REQ-10.2]` `[DESIGN §5]`
   - **Archivos:** `package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `.prettierignore`, `.npmrc`, `.gitignore` (modificar: solo añadir el bloque `# Proyecto`)
   - **Depende de:** 1.2
   - **Alcance:** crear el tooling raíz del monorepo según `design.md § 5`. `.npmrc` contiene `ignore-scripts=true`.
@@ -248,11 +248,11 @@
 ## 4. Execution Progress Tracker
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
-| **Phase 1: Foundation & Domain** | 6 | 2 | `In Progress` |
+| **Phase 1: Foundation & Domain** | 6 | 3 | `In Progress` |
 | **Phase 2: Core Logic & Application** | 3 | 0 | `Pending` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **2** | **12%** |
+| **Total Global** | **16** | **3** | **19%** |
 
 ---
 
