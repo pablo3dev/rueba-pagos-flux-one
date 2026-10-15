@@ -6,7 +6,7 @@ Este archivo no redefine la mecánica interna de sesión de MakIA (`session.md`)
 
 - **Modo**: pull request.
 - El DEPLOY abre un Pull Request desde `makia/dev/<idea-slug>` hacia `main`.
-- El Orquestador abre el Pull Request y lo mergea directamente (`gh`), sin pedir aprobación al USUARIO.
+- El Orquestador abre el Pull Request y lo mergea (`gh`) únicamente tras el aprobado explícito del USUARIO al DEPLOY. Con ese aprobado, ejecuta todo el resto (PR, merge con squash, tag/deploy según deploy.md) sin pedir más confirmaciones.
 - No hay push directo a `main` ni merge forzado.
 - **Estrategia de merge del PR**: squash.
 
