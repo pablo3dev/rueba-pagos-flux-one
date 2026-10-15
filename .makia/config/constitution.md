@@ -78,6 +78,12 @@ No hay push directo a `main`.
 - `.makia/`, `.claude/`, `.cursor/` y `.agents/` quedan fuera de ESLint, Prettier y Docker.
 - Saltos de línea LF en todo el repositorio.
 
+### Límite de la unidad
+
+Cada unidad de código guarda todos sus archivos dentro de su carpeta. El comando de Docker que levanta la unidad, y los archivos de ese comando, también están dentro de la unidad.
+
+Nada de la unidad se crea fuera de su carpeta.
+
 ## Unidad: services/auth
 
 Ámbito: solo `services/auth`.

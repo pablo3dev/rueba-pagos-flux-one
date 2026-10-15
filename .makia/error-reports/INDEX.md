@@ -10,5 +10,6 @@ sincronizados por `makia er open|triage|close`.
 | ER-002 | autenticacion-usuarios-auth | IMPLEMENT | D-07 | CR-05 | v4.8.2 | Abierto | 2026-10-15 |
 | ER-003 | autenticacion-usuarios-auth | IMPLEMENT | D-09 | CR-03 | v4.8.2 | Abierto | 2026-10-15 |
 | ER-004 | riel-bancario-simulado-bank-rail | IMPLEMENT | D-05 | CR-02 | v4.8.2 | Abierto | 2026-10-15 |
+| ER-005 | autenticacion-usuarios-auth | IMPLEMENT | D-14 | CR-06 | v4.8.2 | Abierto | 2026-10-15 |
 
-> Último número asignado: 004.
+> Último número asignado: 005.
