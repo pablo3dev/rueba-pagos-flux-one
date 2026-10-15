@@ -10,3 +10,9 @@ Invocación por plataforma:
 
 - Windows: `.makia\bin\makia.cmd <comando>` (o `python .makia\bin\makia <comando>`).
 - macOS/Linux: `.makia/bin/makia <comando>`.
+
+## Arranque local
+
+```bash
+docker compose --env-file infra/.env.example -f infra/compose.yaml up --build
+```

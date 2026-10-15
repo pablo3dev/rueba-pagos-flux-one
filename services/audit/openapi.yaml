@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: FluxOne Audit
+  version: 1.0.0
+servers:
+  - url: http://localhost:3003
+paths:
+  /health/live:
+    get:
+      operationId: live
+      responses:
+        '200':
+          description: El proceso está vivo.
+  /health/ready:
+    get:
+      operationId: ready
+      responses:
+        '200':
+          description: Base de datos y consumidor AMQP listos.
+        '503':
+          description: Una dependencia no está lista.
+  /audit/transfers/{transferId}/events:
+    get:
+      operationId: listTransferAuditEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: transferId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Historial visible para el sujeto del JWT, ordenado por occurredAt.
+        '400':
+          description: transferId inválido.
+        '401':
+          description: JWT ausente o inválido.
+        '404':
+          description: No hay eventos visibles para esa transferencia.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

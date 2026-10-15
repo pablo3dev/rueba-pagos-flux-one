@@ -1,0 +1,167 @@
+name: fluxone
+
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    env_file:
+      - .env.example
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - '5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1 -p 5432']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  rabbitmq:
+    image: rabbitmq:4.3.6-management-alpine
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: /fluxone
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  auth:
+    build:
+      context: ../services/auth
+      dockerfile: Dockerfile
+    environment:
+      PORT: '3001'
+      DATABASE_URL: postgres://auth_svc:${AUTH_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE}
+      DEMO_USERS_PASSWORD: ${DEMO_USERS_PASSWORD}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3001/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+
+  payments:
+    build:
+      context: ../services/payments
+      dockerfile: Dockerfile
+    environment:
+      PORT: '3002'
+      DATABASE_URL: postgres://payment_svc:${PAYMENT_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AMQP_URL: ${AMQP_URL}
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      RAIL_BASE_URL: ${RAIL_BASE_URL}
+      RAIL_OUTCOME_WEIGHTS: ${RAIL_OUTCOME_WEIGHTS}
+      RAIL_TIMEOUT_DELAY_MS: ${RAIL_TIMEOUT_DELAY_MS}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - '3002:3002'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3002/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+
+  audit:
+    build:
+      context: ../services/audit
+      dockerfile: Dockerfile
+    environment:
+      PORT: '3003'
+      DATABASE_URL: postgres://audit_svc:${AUDIT_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AMQP_URL: ${AMQP_URL}
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - '3003:3003'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3003/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+
+  bank-rail:
+    build:
+      context: ../services/bank-rail
+      dockerfile: Dockerfile
+    environment:
+      PORT: '3004'
+      RAIL_OUTCOME_WEIGHTS: ${RAIL_OUTCOME_WEIGHTS}
+      RAIL_TIMEOUT_DELAY_MS: ${RAIL_TIMEOUT_DELAY_MS}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - '3004:3004'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3004/health']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    ports:
+      - '8080:80'
+    depends_on:
+      auth:
+        condition: service_healthy
+      payments:
+        condition: service_healthy
+      audit:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:80/']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+
+volumes:
+  pg_data:
+  rabbitmq_data:
