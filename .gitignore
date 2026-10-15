@@ -1,0 +1,9 @@
+# Generado por MakIA (install) — carpetas regeneradas o efímeras.
+# .makia/config/, .makia/docs/, .makia/idea/ y .makia/error-reports/ SÍ se versionan.
+# .makia/idea/<idea-slug>/ se comitea en la rama de trabajo makia/dev/<idea-slug> y se
+# excluye del squash-merge final a main (ver session.md RN-03/RN-06).
+.makia/bin/
+.makia/core/
+# .makia/worktrees/<spec-slug>/ son árboles de trabajo efímeros de `git worktree`
+# (ver session.md RN-08): se crean y eliminan dentro del proyecto, nunca se versionan.
+.makia/worktrees/
