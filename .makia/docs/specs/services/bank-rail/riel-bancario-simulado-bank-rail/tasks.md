@@ -130,7 +130,7 @@
   - **Criterio de aceptación:** `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run test -w services/bank-rail -- --project unit tests/unit/application` y `docker compose -f services/bank-rail/compose.dev.yaml run --rm --no-deps dev npm run typecheck -w services/bank-rail`
   - **Evidencia (comportamiento crítico: concurrencia):** `[AC-RIE-10]` `SerialExecutor` ejecuta las tareas de una en una y en orden de llegada (una segunda tarea no inicia hasta que termina la primera) y el rechazo de una tarea no bloquea las siguientes ni se oculta a quien la llamó.
 
-- [ ] **Task 2.2: Adaptadores de salida: ledger JSONL, sorteo aleatorio y reloj** `[REQ-1.6, REQ-5.1, REQ-5.2, REQ-5.3, REQ-5.4, REQ-5.5, REQ-5.6, REQ-6.4]` `[DESIGN §3.2, §4.3]`
+- [x] **Task 2.2: Adaptadores de salida: ledger JSONL, sorteo aleatorio y reloj** `[REQ-1.6, REQ-5.1, REQ-5.2, REQ-5.3, REQ-5.4, REQ-5.5, REQ-5.6, REQ-6.4]` `[DESIGN §3.2, §4.3]`
   - **Archivos:**
     - `services/bank-rail/src/adapters/outbound/ledger/jsonl-file-ledger.ts`
     - `services/bank-rail/src/adapters/outbound/random/random-outcome-picker.ts`
@@ -279,10 +279,10 @@
 | Fase | Total Tareas | Completadas | Estado |
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 4 | 4 | `Done` |
-| **Phase 2: Core Logic & Application** | 2 | 1 | `In Progress` |
+| **Phase 2: Core Logic & Application** | 2 | 2 | `Done` |
 | **Phase 3: Presentation & Endpoints** | 4 | 0 | `Pending` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **13** | **5** | **38%** |
+| **Total Global** | **13** | **6** | **46%** |
 
 ---
 
