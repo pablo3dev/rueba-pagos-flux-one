@@ -186,7 +186,7 @@
     - `[AC-AUT-21]` arrancar la app dos veces sobre la misma DB deja exactamente 3 usuarios demo con los ids fijos (sin duplicar ni modificar a los existentes) y alice, bob y carol inician sesión con `DEMO_USERS_PASSWORD`.
     - Evidencia observada (2026-10-15): `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db --reporter=verbose tests/acceptance/register.test.ts tests/acceptance/login.test.ts tests/acceptance/seed.test.ts` → 3 archivos y 15 pruebas pasan contra PostgreSQL 18.6 de Compose, entre ellas: `✓ [AC-AUT-05] el 11.º registro por IP recibe 429 RATE_LIMITED y no se procesa`; `✓ [AC-AUT-08] el 6.º login por IP recibe 429 RATE_LIMITED e IP distintas tienen límites independientes`; `✓ [AC-AUT-06] un login válido responde 200 con la sesión y la cookie refresh_token con sus atributos` (HttpOnly, SameSite=Strict, Path=/api/auth, Max-Age=604800); `✓ [AC-AUT-07] email inexistente y contraseña errónea dan 401 con el mismo mensaje y sin cookie`; `✓ [AC-AUT-09] el access token EdDSA de 15 min verifica con el JWKS publicado`; `✓ [AC-AUT-21] arrancar dos veces deja exactamente 3 usuarios demo con ids fijos, sin modificar a los existentes`.
 
-- [ ] **Task 3.3: Renovación, cierre de sesión y perfil** `[REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-4.1, REQ-4.2, REQ-5.1, REQ-5.2, REQ-8.3]` `[DESIGN §4.1, §4.2]`
+- [x] **Task 3.3: Renovación, cierre de sesión y perfil** `[REQ-3.1, REQ-3.2, REQ-3.3, REQ-3.4, REQ-4.1, REQ-4.2, REQ-5.1, REQ-5.2, REQ-8.3]` `[DESIGN §4.1, §4.2]`
   - **Archivos:** `services/auth/src/adapters/inbound/http/routes/auth-routes.ts` (modificar: rutas `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`), `services/auth/tests/acceptance/refresh.test.ts`, `services/auth/tests/acceptance/logout.test.ts`, `services/auth/tests/acceptance/profile.test.ts`
   - **Depende de:** 3.2
   - **Alcance:** exponer `POST /auth/refresh` (rotación con detección de reutilización), `POST /auth/logout` y `GET /auth/me` (verificación del token de acceso).
@@ -197,6 +197,7 @@
     - `[AC-AUT-13]` cookie con firma alterada, expirada (fila con `expires_at` pasado) y ausente → 401 `REFRESH_TOKEN_INVALID`.
     - `[AC-AUT-14]` la DB guarda solo SHA-256 (el valor de la cookie no aparece en `refresh_tokens`) y `expires_at` = emisión + 7 días.
     - `[AC-AUT-18]` token expirado, firma inválida, `iss` y `aud` incorrectos → 401 `UNAUTHORIZED`.
+    - Evidencia observada (2026-10-15): `docker compose -f services/auth/compose.dev.yaml run --rm dev npm run test -w services/auth -- --project db --reporter=verbose tests/acceptance/refresh.test.ts tests/acceptance/logout.test.ts tests/acceptance/profile.test.ts` → 3 archivos y 18 pruebas pasan contra PostgreSQL 18.6 de Compose, entre ellas: `✓ [AC-AUT-11] dos renovaciones simultáneas con el mismo token: una 200 y otra 401 REFRESH_TOKEN_REUSED`; `✓ [AC-AUT-12] la reutilización revoca toda la familia: el token sucesor deja de servir y responde 401 REFRESH_TOKEN_REUSED`; `✓ [AC-AUT-13] cookie ausente, alterada, desconocida y expirada responden 401 REFRESH_TOKEN_INVALID y limpian la cookie`; `✓ [AC-AUT-14] la base solo guarda el SHA-256 del token y expires_at = emisión + 7 días`; `✓ [AC-AUT-18] token expirado, firma inválida, iss y aud incorrectos responden 401 UNAUTHORIZED`.
 
 - [ ] **Task 3.4: Operación: health, formato de errores y logs sin secretos** `[REQ-8.1, REQ-8.2, REQ-8.3]` `[DESIGN §4.2, §7.1]`
   - **Archivos:** `services/auth/tests/acceptance/operability.test.ts`; ajustes a los archivos de producción de 3.1–3.3 que la prueba requiera para pasar.
@@ -252,9 +253,9 @@
 |:---|:---:|:---:|:---|
 | **Phase 1: Foundation & Domain** | 6 | 6 | `Done` |
 | **Phase 2: Core Logic & Application** | 3 | 3 | `Done` |
-| **Phase 3: Presentation & Endpoints** | 4 | 2 | `In Progress` |
+| **Phase 3: Presentation & Endpoints** | 4 | 3 | `In Progress` |
 | **Phase 4: Verification & Polish** | 3 | 0 | `Pending` |
-| **Total Global** | **16** | **11** | **69%** |
+| **Total Global** | **16** | **12** | **75%** |
 
 ---
 

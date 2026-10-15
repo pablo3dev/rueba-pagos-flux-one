@@ -58,6 +58,9 @@ export async function buildApp(deps: BuildAppDeps): Promise<FastifyInstance> {
     config,
     registerUser: useCases.registerUser,
     loginUser: useCases.loginUser,
+    refreshSession: useCases.refreshSession,
+    logoutSession: useCases.logoutSession,
+    getProfile: useCases.getProfile,
   });
   await app.register(jwksRoutes, { getJwks: useCases.getJwks });
   await app.register(healthRoutes, { isDatabaseReady });
