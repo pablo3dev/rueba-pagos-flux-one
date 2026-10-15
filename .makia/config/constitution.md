@@ -107,7 +107,7 @@ Nada de la unidad se crea fuera de su carpeta.
 
 ### Ejecución en contenedores
 
-- Todo comando de compilación, prueba y ejecución de la unidad corre en contenedores con `docker compose -f services/bank-rail/compose.dev.yaml` (servicio `dev`).
+- Todo archivo de la unidad (Compose, Dockerfile, lockfile, tsconfig y el toolchain npm) vive en `services/bank-rail`. El comando de Docker se ejecuta con esa carpeta como directorio de trabajo (`docker compose -f compose.dev.yaml`, servicio `dev`). El contexto de build es esa carpeta. Nada de la unidad se crea fuera.
 
 ### Modelo de dominio
 
